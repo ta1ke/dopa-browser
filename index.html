@@ -14,6 +14,7 @@
   --bg:#EEF0F5; --paper:#FAFBFD; --ink:#191B26; --ink-2:#555A70; --ink-3:#868BA0;
   --line:#D8DCE7; --chip:#E2E5EE; --shadow:0 10px 30px rgb(25 27 38 / .14);
   --acc-l:42%; --mk-s:96%; --mk-l:63%; --mk-a:.36; --glow:.10;
+  --fabfill:hsl(var(--h) 72% 36%);
   --h:195; --heat:.5; --str:1; --dim:1; --fs:18px;
   --ink-read:color-mix(in oklab, var(--ink) 80%, hsl(var(--h) 85% var(--acc-l)));
   --hot:hsl(var(--h) 85% var(--acc-l));
@@ -26,11 +27,11 @@
     color-scheme:dark;
     --bg:#101119; --paper:#181A26; --ink:#E6E7EF; --ink-2:#A4A8BB; --ink-3:#70758B;
     --line:#2A2D3D; --chip:#232636; --shadow:0 12px 34px rgb(0 0 0 / .5);
-    --acc-l:72%; --mk-s:82%; --mk-l:52%; --mk-a:.40; --glow:.14;
+    --acc-l:72%; --mk-s:82%; --mk-l:52%; --mk-a:.40; --glow:.14; --fabfill:hsl(var(--h) 85% 72%);
   }
 }
 :root[data-theme="dark"]{
-  color-scheme:dark;
+  color-scheme:dark; --fabfill:hsl(var(--h) 85% 72%);
   --bg:#101119; --paper:#181A26; --ink:#E6E7EF; --ink-2:#A4A8BB; --ink-3:#70758B;
   --line:#2A2D3D; --chip:#232636; --shadow:0 12px 34px rgb(0 0 0 / .5);
   --acc-l:72%; --mk-s:82%; --mk-l:52%; --mk-a:.40; --glow:.14;
@@ -85,7 +86,21 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
 .intro h1{font-size:1.62em; line-height:1.45; margin:0; font-weight:700; text-wrap:balance; letter-spacing:.01em}
 .meta{font-family:var(--mono); font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; display:flex; gap:14px; flex-wrap:wrap}
 .hint{font-size:13.5px; color:var(--ink-2); line-height:1.8; margin:4px 0 0; max-width:36em}
-.hint kbd,.fab kbd{font-family:var(--mono); font-size:11px; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:1px 5px; background:var(--paper); color:var(--ink-2)}
+.hint kbd,.fab{--cp:0%; background:linear-gradient(90deg, var(--fabfill) var(--cp), var(--ink) var(--cp)); transition:transform .12s}
+.fab small{font-family:var(--mono); font-size:11.5px; font-weight:700; opacity:.9; font-variant-numeric:tabular-nums}
+.fab.chest{animation:chestpop .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes chestpop{0%{transform:scale(1)}35%{transform:scale(1.14)}100%{transform:scale(1)}}
+.s.lucky{background-image:linear-gradient(transparent 62%, hsl(45 100% 55% / .55) 62%); color:var(--ink)}
+.s.lucky.flash{animation:luck 1.1s ease-out}
+@keyframes luck{0%{background-color:hsl(45 100% 60% / .75)}100%{background-color:transparent}}
+.fl.big{font-size:22px; color:hsl(42 100% 50%); text-shadow:0 2px 12px hsl(45 100% 50% / .45)}
+.fl.big b{display:block; font-size:12px; letter-spacing:.14em}
+:root.fever .brand::after{content:" FEVER"; font-family:var(--mono); font-size:11px; letter-spacing:.12em; vertical-align:middle; color:hsl(var(--h) 95% 55%)}
+:root.fever body::before{content:""; position:fixed; inset:0; pointer-events:none; z-index:22;
+  box-shadow:inset 0 0 70px hsl(var(--h) 95% 58% / .38); animation:fever 1.6s ease-in-out infinite alternate}
+@keyframes fever{from{opacity:.55}to{opacity:1}}
+.toast.gold .tag{background:hsl(45 100% 55%)}
+.fab kbd{font-family:var(--mono); font-size:11px; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:1px 5px; background:var(--paper); color:var(--ink-2)}
 
 .reader{max-width:40em; margin-inline:auto; font-size:var(--fs); line-height:1.95; letter-spacing:.02em; padding-bottom:62vh}
 .reader .p{margin:0 0 1.15em; transition:opacity .45s}
@@ -246,6 +261,12 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
         <input type="radio" name="bionic" id="bi0" value="0"><label for="bi0">オフ</label>
         <input type="radio" name="bionic" id="bi1" value="1"><label for="bi1">オン</label>
       </div></div>
+    <div class="field"><span>どぱどぱ度（当たり・宝箱・フィーバー）</span>
+      <div class="seg">
+        <input type="radio" name="fx" id="fx0" value="0"><label for="fx0">控えめ</label>
+        <input type="radio" name="fx" id="fx1" value="1"><label for="fx1">標準</label>
+        <input type="radio" name="fx" id="fx2" value="2"><label for="fx2">どぱどぱ</label>
+      </div></div>
     <div class="field"><span>効果音</span>
       <div class="seg">
         <input type="radio" name="sound" id="so0" value="0"><label for="so0">オフ</label>
@@ -270,7 +291,7 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
 <nav class="mini" id="mini" aria-label="段落ごとの進み具合"></nav>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="toasts" id="toasts" aria-live="polite"></div>
-<button class="fab" id="fab" type="button">次の文 <kbd>Space</kbd></button>
+<button class="fab" id="fab" type="button">次の文 <small id="fabCp"></small> <kbd>Space</kbd></button>
 
 <div class="sheet-bg" id="loadBg" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="loadTitle">
@@ -360,7 +381,7 @@ const SAMPLE = `# 報酬予測誤差とドーパミン：「驚き」は学習�
 それでも、「飽きる」という感覚を予測と結果のずれとして捉え直すと、退屈な文章に向き合うための具体的な手がかりが得られる。まずはこの文章を最後まで読んで、自分に効くかどうかを確かめてほしい。`;
 
 /* ---------------- settings & global ---------------- */
-let S = Object.assign({str:1, dim:0.72, size:18, bionic:false, sound:false}, store.get('dopa:settings', {}));
+let S = Object.assign({str:1, dim:0.72, size:18, bionic:false, sound:false, fx:2}, store.get('dopa:settings', {}));
 let G = Object.assign({xp:0, days:[], rereads:0}, store.get('dopa:global', {}));
 const cloud = {ref:null, docs:null, timer:0, busy:false, again:false, known:new Set(), art:{}};
 const DAY = 86400000;
@@ -378,7 +399,7 @@ function applySettings(){
   root.style.setProperty('--dim', S.dim);
   root.style.setProperty('--fs', S.size + 'px');
   const pick = (name, v) => { const el = [...document.querySelectorAll(`input[name="${name}"]`)].find(i => String(i.value) === String(v)); if(el) el.checked = true; };
-  pick('str', S.str); pick('dim', S.dim); pick('size', S.size); pick('bionic', S.bionic ? 1 : 0); pick('sound', S.sound ? 1 : 0);
+  pick('str', S.str); pick('dim', S.dim); pick('size', S.size); pick('bionic', S.bionic ? 1 : 0); pick('sound', S.sound ? 1 : 0); pick('fx', S.fx);
 }
 
 /* ---------------- parsing ---------------- */
@@ -657,7 +678,7 @@ function render(){
     } else {
       const seen = new Set();
       html += `<p class="p" id="b${b.bi}">` + b.sents.map(i => {
-        const s = sents[i]; const cls = s.st === 1 ? ' read' : s.st === 2 ? ' skim' : '';
+        const s = sents[i]; const cls = (s.st === 1 ? ' read' : s.st === 2 ? ' skim' : '') + (luckySet.has(i) ? ' lucky' : '');
         return `<span class="s${cls}" id="s${i}">${fmt(s.text, seen)}</span>`;
       }).join('') + '</p>';
     }
@@ -696,7 +717,7 @@ function loadDocState(){
 let lapBonus = 0;
 function startLap(){
   D.mult = D.lastDone ? spacingMult(Date.now() - D.lastDone) : 1;
-  D.st = ''; D.done = false; D.ms = {}; D.xp = 0; D.cred = 0; D.time = 0; D.maxCombo = 0;
+  D.st = ''; D.done = false; D.ms = {}; D.xp = 0; D.cred = 0; D.time = 0; D.maxCombo = 0; D.lucky = []; D.luckyN = 0; D.chests = 0;
   D.lapStart = Date.now();
 }
 function lapNo(){ return (D && D.pass || 0) + (D && D.done ? 0 : 1); }
@@ -760,8 +781,8 @@ function refreshSection(sec, silent){
   h.el.classList.toggle('done', !!sec.done);
   if(sec.done && !wasDone && !silent){
     let cred = 0; sec.paras.forEach(bi => doc.blocks[bi].sents.forEach(i => { if(doc.sents[i].st === 1) cred += doc.sents[i].len; }));
-    if(cred >= sec.chars * 0.5){ const bonus = Math.round((30 + sec.chars / 40) * (D.mult || 1)); addXP(bonus); toast('節クリア', `「${h.text}」`, `+${bonus} XP のボーナス`); }
-    else toast('節を通過', `「${h.text}」`, '飛ばした部分が多いのでボーナスなし');
+    if(cred >= sec.chars * 0.5){ const bonus = Math.round((30 + sec.chars / 40) * (D.mult || 1)); addXP(bonus); if(sec.chars >= 300) toast('節クリア', `「${h.text}」`, `+${bonus} XP のボーナス`); else floatXP(bonus, 0); }
+    else if(sec.chars >= 300) toast('節を通過', `「${h.text}」`, '飛ばした部分が多いのでボーナスなし');
   }
 }
 
@@ -812,13 +833,16 @@ function advance(from, to, now){
   D.time += Math.min(el, 90000);
   if(el > 180000) combo = 0;
   let budget = el, gain = 0, credited = 0, skimmed = 0;
-  const touched = new Set();
+  const touched = new Set(), hits = [];
+  lastAdv = now; nudged = false;
   for(const i of list){
     const need = ss[i].len * MS_PER_CHAR;
     if(budget >= need){
       budget -= need; combo++; credited++;
-      const g = Math.round(ss[i].len * (1 + Math.min(combo, 50) * 0.02) * (D.mult || 1));
-      gain += g; D.cred += ss[i].len; setState(i, 1);
+      let g = ss[i].len * (1 + Math.min(combo, 50) * 0.02) * (D.mult || 1) * (fever ? 1.5 : 1);
+      const lk = rollLucky();
+      if(lk){ g *= lk.x; hits.push({i, lk, g: Math.round(g)}); }
+      g = Math.round(g); gain += g; D.cred += ss[i].len; setState(i, 1);
       if([10, 25, 50, 100, 200].includes(combo)) toast('COMBO', `${combo} 文連続`, `倍率 ×${(1 + Math.min(combo, 50) * .02).toFixed(2)}`);
     } else { setState(i, 2); skimmed++; }
     touched.add(ss[i].bi);
@@ -828,13 +852,97 @@ function advance(from, to, now){
     combo = 0;
   }
   D.maxCombo = Math.max(D.maxCombo, combo);
-  if(gain){ addXP(gain); floatXP(gain, combo); blip(combo); bump('#hCombo'); }
+  setFever(S.fx > 0 && combo >= FEVER_AT);
+  if(gain){ addXP(gain); if(hits.length) hits.forEach(showLucky); else floatXP(gain, combo); blip(combo); bump('#hCombo'); }
+  checkChests();
   touched.forEach(bi => refreshBlock(doc.blocks[bi]));
   const secs = new Set([...touched].map(bi => doc.blocks[bi].sec).filter(Boolean));
   secs.forEach(sec => refreshSection(sec));
   milestones();
   saveSoon();
 }
+/* ---------------- どぱどぱ：当たり・宝箱・フィーバー ---------------- */
+const FEVER_AT = 20;
+let fever = false, sinceLucky = 0, luckySet = new Set(), frontier = 0, cpNext = 0, lastAdv = performance.now(), nudged = false;
+// 当たり：どの文が当たるかは読むまでわからない。外れが続くほど当たりやすくなる（天井つき）
+function rollLucky(){
+  if(!S.fx) return null;
+  sinceLucky++;
+  const p = S.fx === 2 ? Math.min(0.03 + 0.008 * sinceLucky, 0.35) : Math.min(0.015 + 0.004 * sinceLucky, 0.2);
+  if(Math.random() >= p) return null;
+  sinceLucky = 0;
+  const r = Math.random();
+  return r < 0.05 ? {x:10, tag:'JACKPOT', name:'超大当たり'} : r < 0.3 ? {x:5, tag:'大当たり', name:'大当たり'} : {x:3, tag:'ラッキー', name:'ラッキー文'};
+}
+function showLucky(h){
+  const s = doc.sents[h.i];
+  luckySet.add(h.i); D.lucky = [...luckySet]; D.luckyN = (D.luckyN || 0) + 1;
+  s.el.classList.add('lucky'); s.el.classList.remove('flash'); void s.el.offsetWidth; s.el.classList.add('flash');
+  const r = s.el.getBoundingClientRect();
+  if(r.bottom > 0 && r.top < innerHeight){ burst(Math.min(r.right, innerWidth - 40), r.top + 10, h.lk.x >= 10 ? 60 : h.lk.x >= 5 ? 34 : 20, 45); }
+  const f = document.createElement('div'); f.className = 'fl big';
+  f.innerHTML = `<b>${esc(h.lk.tag)} ×${h.lk.x}</b>+${h.g.toLocaleString()}`;
+  f.style.left = Math.min(reader.getBoundingClientRect().right + 14, innerWidth - 150) + 'px'; f.style.top = (focusY() - 30) + 'px';
+  document.body.appendChild(f); setTimeout(() => f.remove(), 1300);
+  if(h.lk.x >= 5) toast(h.lk.tag, `${h.lk.name}！ XP ×${h.lk.x}`, `この文章で ${D.luckyN} 回目の当たり`, 'gold');
+  const base = h.lk.x >= 10 ? [0, 4, 7, 12, 16, 19, 24] : h.lk.x >= 5 ? [0, 4, 7, 12, 16] : [0, 7, 12];
+  base.forEach((n, k) => tone(880 * Math.pow(2, n / 12), k * .055, .16, .035));
+}
+function setFever(on){
+  if(on === fever) return;
+  fever = on; root.classList.toggle('fever', on && !reduce);
+  if(on){ toast('FEVER', `${combo} 文連続！ フィーバー突入`, 'コンボが続くあいだ XP ×1.5'); [0, 3, 7, 10, 14].forEach((n, k) => tone(587.33 * Math.pow(2, n / 12), k * .07, .2, .04)); }
+}
+// 宝箱：本文を 400〜800 字ごとに区切ったチェックポイント。最後まで読むと開く
+function buildCps(){
+  const size = [800, 550, 400][S.fx] || 550;
+  const cps = []; let acc = 0;
+  doc.sents.forEach((s, i) => { acc += s.len; if(acc >= size){ cps.push(i); acc = 0; } });
+  if(cps.length && doc.sents.length - 1 - cps[cps.length - 1] < 3) cps.pop();   // 終わりの直前は読了ボーナスに任せる
+  doc.cps = cps;
+  frontier = 0; while(frontier < doc.sents.length && doc.sents[frontier].st) frontier++;
+  cpNext = 0; while(cpNext < cps.length && cps[cpNext] < frontier) cpNext++;
+  fabCp();
+}
+function fabCp(){
+  const fab = $('#fab'), el = $('#fabCp');
+  if(!doc || !doc.cps || cpNext >= doc.cps.length){ el.textContent = ''; fab.style.setProperty('--cp', '0%'); return; }
+  const from = cpNext ? doc.cps[cpNext - 1] + 1 : 0, to = doc.cps[cpNext];
+  let tot = 0, done = 0;
+  for(let i = from; i <= to; i++){ tot += doc.sents[i].len; if(doc.sents[i].st) done += doc.sents[i].len; }
+  el.textContent = `宝箱まで ${(tot - done).toLocaleString()}字`;
+  fab.style.setProperty('--cp', (done / tot * 100).toFixed(1) + '%');
+}
+function checkChests(){
+  if(!doc.cps) return;
+  const ss = doc.sents;
+  while(frontier < ss.length && ss[frontier].st) frontier++;
+  while(cpNext < doc.cps.length && doc.cps[cpNext] < frontier){
+    const from = cpNext ? doc.cps[cpNext - 1] + 1 : 0, to = doc.cps[cpNext];
+    let tot = 0, cred = 0;
+    for(let i = from; i <= to; i++){ tot += ss[i].len; if(ss[i].st === 1) cred += ss[i].len; }
+    cpNext++;
+    if(cred >= tot * 0.5){
+      const r = Math.random(), tier = r < 0.08 ? {x:5, name:'レア宝箱'} : r < 0.35 ? {x:2, name:'銀の宝箱'} : {x:1, name:'宝箱'};
+      const g = Math.round((40 + tot / 12) * tier.x * (D.mult || 1));
+      D.chests = (D.chests || 0) + 1; addXP(g);
+      toast(tier.x >= 5 ? 'RARE' : '宝箱', `${tier.name}を開けた ＋${g.toLocaleString()} XP`, `${cpNext} / ${doc.cps.length} 個目` + (cpNext < doc.cps.length ? ` ・ 次の宝箱まで ${(()=>{let t=0;for(let i=doc.cps[cpNext-1]+1;i<=doc.cps[cpNext];i++)t+=doc.sents[i].len;return t;})().toLocaleString()}字` : ' ・ あとはゴールまで'), tier.x >= 5 ? 'gold' : '');
+      const fab = $('#fab'); fab.classList.remove('chest'); void fab.offsetWidth; fab.classList.add('chest');
+      const fr = fab.getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top, tier.x >= 5 ? 50 : 26, tier.x >= 5 ? 45 : null);
+      [0, 4, 7, 12].forEach((n, k) => tone(523.25 * Math.pow(2, n / 12), k * .06, .3, .04)); if(tier.x >= 5) tone(1567.98, .3, .5, .035);
+    } else toast('宝箱', '飛ばし読みが多くて開きませんでした', '次の区間はじっくりどうぞ');
+  }
+  fabCp();
+}
+// しばらく止まっていたら、次のごほうびまでの距離を知らせる
+setInterval(() => {
+  if(!doc || document.hidden || !S.fx || nudged || !$('#loadBg').hidden || !$('#doneBg').hidden) return;
+  if(cur < 0 || cur >= doc.sents.length || performance.now() - lastAdv < 45000) return;
+  nudged = true;
+  const t = $('#fabCp').textContent;
+  toast('あと少し', t ? t.replace('宝箱まで ', '次の宝箱まで あと ') : 'ゴールはすぐそこ', sinceLucky > 6 ? 'そろそろ当たりが出やすくなっています' : '一文ずつで大丈夫');
+}, 5000);
+
 function milestones(){
   const p = readChars / doc.totalChars;
   for(const m of [25, 50, 75]){
@@ -875,9 +983,9 @@ function floatXP(g, c){
   f.style.left = x + 'px'; f.style.top = (focusY() - 10) + 'px';
   document.body.appendChild(f); setTimeout(() => f.remove(), 1300);
 }
-function toast(tag, title, sub){
+function toast(tag, title, sub, cls){
   const box = $('#toasts');
-  const t = document.createElement('div'); t.className = 'toast';
+  const t = document.createElement('div'); t.className = 'toast' + (cls ? ' ' + cls : '');
   t.innerHTML = `<span class="tag">${esc(tag)}</span><div><b>${esc(title)}</b>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</div>`;
   box.appendChild(t); while(box.children.length > 3) box.firstChild.remove();
   setTimeout(() => t.remove(), 3400);
@@ -886,10 +994,10 @@ function toast(tag, title, sub){
 /* particles */
 const cv = $('#fx'), cx = cv.getContext('2d'); let parts = [], fxOn = false;
 function resizeFx(){ const d = window.devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
-function burst(x, y, n){
+function burst(x, y, n, hue){
   if(reduce) return;
   const h = parseFloat(getComputedStyle(root).getPropertyValue('--h')) || 195;
-  for(let i = 0; i < n; i++) parts.push({x, y, vx:(Math.random() - .5) * 4.2, vy:-Math.random() * 3.2 - .8, life:1, h:h + Math.random() * 50 - 25, r:1.6 + Math.random() * 2.2});
+  for(let i = 0; i < n; i++) parts.push({x, y, vx:(Math.random() - .5) * 4.2, vy:-Math.random() * 3.2 - .8, life:1, h:(hue != null ? hue : h) + Math.random() * 50 - 25, r:1.6 + Math.random() * 2.2});
   if(!fxOn){ fxOn = true; requestAnimationFrame(fxLoop); }
 }
 function fxLoop(){
@@ -930,7 +1038,8 @@ function showDone(){
   $('#doneSub').textContent = `「${doc.title}」を${pass >= 2 ? pass + '回' : '最後まで'}読みました。`
     + (ratio >= 80 ? 'ほとんどの文をじっくり読めています。' : '飛ばした文はマーカーなしで残っています。')
     + (lapBonus ? `周回ボーナス +${lapBonus.toLocaleString()} XP。` : (pass >= 2 ? '飛ばし読みが多かったので周回ボーナスはありません。' : ''))
-    + `次は${gap}日後くらいに読み返すと XP ${fmtMult(nm)} です。`;
+    + `次は${gap}日後くらいに読み返すと XP ${fmtMult(nm)} です。`
+    + ((D.chests || D.luckyN) ? ` 宝箱 ${D.chests || 0}個 ・ 当たり ${D.luckyN || 0}回。` : '');
   const cells = [
     ['周回', `${pass}<small>周目</small>`],
     ['読書時間', fmtTime(D.time)],
@@ -956,13 +1065,14 @@ function openDoc(blocks, meta){
   $('#docTitle').textContent = doc.title;
   $('#hudName').textContent = doc.title;
   doc.meta = meta;
+  luckySet = new Set(Array.isArray(D.lucky) ? D.lucky : []); sinceLucky = 0; setFever(false); lastAdv = performance.now(); nudged = false;
   const lap = lapNo();
   $('#eyebrow').textContent = meta.kind + (lap >= 2 ? ` ・ ${lap}周目 ・ XP ${fmtMult(D.mult || 1)}` : '');
   reader.classList.toggle('relap', (D.pass || 0) > 0);
   const mins = Math.max(1, Math.round(doc.totalChars / 600));
   $('#meta').innerHTML = `<span>${doc.totalChars.toLocaleString()} 字</span><span>${doc.sents.length} 文</span><span>目安 ${mins} 分</span>` + (doc.pages ? `<span>${doc.pages} ページ</span>` : '') + (meta.src ? `<span><a href="${meta.src.replace(/"/g, '%22').replace(/</g, '%3C')}" target="_blank" rel="noopener">元のページ</a></span>` : '');
-  doc.meta = meta;
   render();
+  buildCps();
   measure();
   hud();
   scrollTo({top:0, behavior:'auto'});
@@ -1272,6 +1382,7 @@ pop.addEventListener('change', e => {
   if(t.name === 'dim') S.dim = +t.value;
   if(t.name === 'size') S.size = +t.value;
   if(t.name === 'bionic') S.bionic = t.value === '1';
+  if(t.name === 'fx'){ S.fx = +t.value; if(doc){ buildCps(); if(S.fx === 0) setFever(false); hud(); } }
   if(t.name === 'sound'){ S.sound = t.value === '1'; if(S.sound){ tone(659.25, 0, .15, .04); tone(987.77, .08, .2, .035); } }
   store.set('dopa:settings', S); applySettings(); cloudSave();
   relayout(prevBionic, prevSize);
