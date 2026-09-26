@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>ドパブラウザ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EEF0F5; --paper:#FAFBFD; --ink:#191B26; --ink-2:#555A70; --ink-3:#868BA0;
+  --line:#D8DCE7; --chip:#E2E5EE; --shadow:0 10px 30px rgb(25 27 38 / .14);
+  --acc-l:42%; --mk-s:96%; --mk-l:63%; --mk-a:.36; --glow:.10;
+  --h:195; --heat:.5; --str:1; --dim:1; --fs:18px;
+  --ink-read:color-mix(in oklab, var(--ink) 80%, hsl(var(--h) 85% var(--acc-l)));
+  --hot:hsl(var(--h) 85% var(--acc-l));
+  --sans:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",Meiryo,system-ui,sans-serif;
+  --disp:"Dela Gothic One","Zen Kaku Gothic New","Hiragino Sans",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101119; --paper:#181A26; --ink:#E6E7EF; --ink-2:#A4A8BB; --ink-3:#70758B;
+    --line:#2A2D3D; --chip:#232636; --shadow:0 12px 34px rgb(0 0 0 / .5);
+    --acc-l:72%; --mk-s:82%; --mk-l:52%; --mk-a:.40; --glow:.14;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101119; --paper:#181A26; --ink:#E6E7EF; --ink-2:#A4A8BB; --ink-3:#70758B;
+  --line:#2A2D3D; --chip:#232636; --shadow:0 12px 34px rgb(0 0 0 / .5);
+  --acc-l:72%; --mk-s:82%; --mk-l:52%; --mk-a:.40; --glow:.14;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:14px; -webkit-font-smoothing:antialiased}
+
+/* ---------- HUD ---------- */
+.hud{position:sticky; top:env(safe-area-inset-top,0px); z-index:30;
+  background:color-mix(in oklab, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border-bottom:1px solid var(--line)}
+.hud-in{display:flex; align-items:center; gap:18px; padding:9px 16px; max-width:1180px; margin-inline:auto}
+.brand{font-family:var(--disp); font-size:20px; letter-spacing:.02em; color:var(--hot); transition:color .8s; line-height:1}
+.docname{flex:1; min-width:0; color:var(--ink-2); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stats{display:flex; gap:18px; align-items:center}
+.stat{display:flex; flex-direction:column; gap:3px; line-height:1}
+.lab{font-size:10px; letter-spacing:.12em; color:var(--ink-3); font-weight:700}
+.val{font-family:var(--mono); font-weight:700; font-size:15px; font-variant-numeric:tabular-nums; min-width:3.2ch; display:inline-block}
+.val.bump{animation:bump .32s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{from{transform:scale(1.35); color:var(--hot)}to{transform:scale(1)}}
+.lv .lab b{font-family:var(--mono); font-size:15px; color:var(--ink); letter-spacing:0}
+.xpbar{display:block; width:74px; height:5px; border-radius:3px; background:var(--chip); overflow:hidden}
+.xpbar i{display:block; height:100%; width:0; background:var(--hot); transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.btn{font:inherit; font-size:13px; font-weight:500; color:var(--ink); background:var(--paper); border:1px solid var(--line);
+  border-radius:8px; padding:7px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; text-decoration:none}
+.btn:hover{border-color:var(--ink-3)}
+.btn:focus-visible,.seg input:focus-visible+label,.fab:focus-visible,.mini i:focus-visible{outline:2px solid var(--hot); outline-offset:2px}
+.btn.icon{padding:7px 9px}
+.btn.primary{background:var(--ink); color:var(--bg); border-color:var(--ink); font-weight:700}
+.btn.ghost{background:transparent}
+.btn svg{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round}
+.prog{height:3px; background:var(--line)}
+.prog i{display:block; height:100%; width:0; background:linear-gradient(90deg,hsl(195 90% 52%),hsl(var(--h) 92% 58%)); transition:width .45s}
+
+/* settings popover */
+.pop{position:absolute; right:16px; top:100%; margin-top:8px; width:min(330px, calc(100vw - 32px)); background:var(--paper);
+  border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:16px; display:grid; gap:14px; z-index:35}
+.field{display:grid; gap:6px}
+.field>span{font-size:12px; color:var(--ink-2); font-weight:500}
+.seg{display:flex; background:var(--chip); border-radius:8px; padding:3px; gap:2px}
+.seg input{position:absolute; opacity:0; width:1px; height:1px}
+.seg label{flex:1; text-align:center; padding:6px 4px; border-radius:6px; cursor:pointer; font-size:13px; color:var(--ink-2)}
+.seg input:checked+label{background:var(--paper); color:var(--ink); font-weight:700; box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.totals{font-size:12px; color:var(--ink-2); border-top:1px solid var(--line); padding-top:12px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:center}
+.totals b{font-family:var(--mono); color:var(--ink)}
+
+/* ---------- Reader ---------- */
+.wrap{padding-inline:16px}
+.intro{max-width:40em; margin-inline:auto; min-height:42vh; display:flex; flex-direction:column; justify-content:flex-end; gap:12px; padding-block:28px 34px; font-size:var(--fs)}
+.eyebrow{font-size:12px; letter-spacing:.14em; color:var(--hot); font-weight:700; transition:color .8s}
+.intro h1{font-size:1.62em; line-height:1.45; margin:0; font-weight:700; text-wrap:balance; letter-spacing:.01em}
+.meta{font-family:var(--mono); font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; display:flex; gap:14px; flex-wrap:wrap}
+.hint{font-size:13.5px; color:var(--ink-2); line-height:1.8; margin:4px 0 0; max-width:36em}
+.hint kbd,.fab kbd{font-family:var(--mono); font-size:11px; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:1px 5px; background:var(--paper); color:var(--ink-2)}
+
+.reader{max-width:40em; margin-inline:auto; font-size:var(--fs); line-height:1.95; letter-spacing:.02em; padding-bottom:62vh}
+.reader .p{margin:0 0 1.15em; transition:opacity .45s}
+.reader.active.focus .p:not(.curp), .reader.active.focus .h{opacity:var(--dim)}
+.reader .h{font-size:1.14em; line-height:1.5; margin:2.3em 0 .8em; font-weight:700; text-wrap:balance; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; transition:opacity .45s}
+.secmeta{font-family:var(--mono); font-weight:500; font-size:11.5px; letter-spacing:.02em; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.h.done .secmeta{color:var(--hot)}
+
+.s{border-radius:3px; -webkit-box-decoration-break:clone; box-decoration-break:clone; transition:color .6s, background-color .35s}
+.s.cur{background-color:hsl(var(--h) 90% 60% / calc(var(--glow) * var(--str)))}
+.s.read{color:var(--ink-read)}
+.k{background-image:linear-gradient(hsl(var(--h) var(--mk-s) var(--mk-l) / calc(var(--mk-a) * var(--heat))), hsl(var(--h) var(--mk-s) var(--mk-l) / calc(var(--mk-a) * var(--heat))));
+  background-repeat:no-repeat; background-position:0 90%; background-size:0% 40%;
+  transition:background-size .75s cubic-bezier(.2,.75,.2,1) calc(var(--i,0) * 90ms)}
+.s.cur .k{background-size:100% 10%; transition-delay:0s}
+.s.read .k{background-size:100% 40%}
+.bi{font-weight:700}
+
+.endmark{max-width:40em; margin:2em auto 66vh; display:flex; align-items:center; gap:12px; color:var(--ink-3); font-size:12px; letter-spacing:.14em}
+.endmark::before,.endmark::after{content:""; flex:1; height:1px; background:var(--line)}
+
+/* minimap */
+.mini{position:fixed; right:22px; top:96px; bottom:96px; width:8px; display:none; flex-direction:column; z-index:10}
+.mini i{flex:var(--g) 1 0; min-height:2px; border-bottom:2px solid var(--bg); cursor:pointer;
+  background:linear-gradient(to bottom, hsl(var(--h) 85% 58%) var(--pf,0%), var(--line) var(--pf,0%)); border-radius:2px}
+.mini i.cur{box-shadow:0 0 0 2px var(--ink-2)}
+.mini i.skimmy{background:linear-gradient(to bottom, var(--ink-3) var(--pf,0%), var(--line) var(--pf,0%))}
+@media (min-width:1100px){.mini{display:flex}}
+
+/* floating + fx */
+.fab{position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:25; font:inherit; font-weight:700; font-size:14px;
+  background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:12px 18px; display:flex; align-items:center; gap:10px; cursor:pointer; box-shadow:var(--shadow)}
+.fab kbd{background:transparent; color:inherit; border-color:color-mix(in oklab, var(--bg) 40%, transparent)}
+.fab:active{transform:scale(.97)}
+.fl{position:fixed; z-index:24; pointer-events:none; font-family:var(--mono); font-weight:700; font-size:14px; color:var(--hot);
+  animation:up 1.2s cubic-bezier(.2,.7,.3,1) forwards; white-space:nowrap}
+.fl small{font-size:11px; color:var(--ink-3); margin-left:4px}
+@keyframes up{0%{opacity:0; transform:translateY(6px)}15%{opacity:1}100%{opacity:0; transform:translateY(-38px)}}
+#fx{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:23}
+.toasts{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom,0px)); z-index:40;
+  display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; width:max-content; max-width:calc(100vw - 32px)}
+.toast{background:var(--ink); color:var(--bg); border-radius:12px; padding:10px 16px 10px 10px; display:flex; gap:12px; align-items:center;
+  box-shadow:var(--shadow); animation:tin .38s cubic-bezier(.2,1.4,.4,1), tout .4s ease 2.9s forwards; max-width:100%}
+.toast .tag{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em; background:hsl(var(--h) 88% 58%); color:#12131a; border-radius:7px; padding:5px 8px; white-space:nowrap}
+.toast b{display:block; font-size:14px}
+.toast span.sub{display:block; font-size:12px; opacity:.72; margin-top:2px}
+@keyframes tin{from{opacity:0; transform:translateY(12px) scale(.96)}}
+@keyframes tout{to{opacity:0; transform:translateY(-6px)}}
+
+/* sheets */
+.sheet-bg{position:fixed; inset:0; z-index:50; background:rgb(8 10 18 / .5); display:grid; place-items:center; padding:16px}
+.sheet{background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow);
+  width:min(660px,100%); max-height:calc(100% - 8px); overflow:auto; padding:22px; display:grid; gap:14px}
+.sheet h2{margin:0; font-size:18px}
+.sheet p{margin:0; color:var(--ink-2); line-height:1.75; font-size:13.5px}
+.sheet textarea{width:100%; min-height:210px; resize:vertical; background:var(--bg); color:var(--ink); border:1px solid var(--line);
+  border-radius:10px; padding:12px; font:14px/1.75 var(--sans)}
+.sheet textarea:focus-visible{outline:2px solid var(--hot); outline-offset:1px}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.row .sp{flex:1}
+.file{position:relative}
+.file input{position:absolute; opacity:0; width:1px; height:1px}
+.file:focus-within{outline:2px solid var(--hot); outline-offset:2px}
+.msg{font-size:12.5px; color:var(--ink-2)}
+.msg.err{color:#D0364B}
+.web{display:grid; gap:10px; border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--bg)}
+.web h3{margin:0; font-size:14px}
+.steps{margin:0; padding-left:1.3em; display:grid; gap:12px; font-size:13px; color:var(--ink-2); line-height:1.75}
+.steps li::marker{font-family:var(--mono); font-weight:700; color:var(--ink)}
+.steps .row{margin-top:6px}
+.steps kbd{font-family:var(--mono); font-size:11px; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; background:var(--paper)}
+.bm{font-family:var(--disp); font-size:14px; letter-spacing:.04em; text-decoration:none; color:#12131a; background:hsl(var(--h) 88% 60%); padding:7px 16px; border-radius:8px; cursor:grab}
+.bm:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+.inp{flex:1; min-width:0; font:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink)}
+.inp:focus-visible{outline:2px solid var(--hot); outline-offset:1px}
+.btn[aria-disabled="true"]{opacity:.45; pointer-events:none}
+.or{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-3); letter-spacing:.1em}
+.or::before,.or::after{content:""; flex:1; height:1px; background:var(--line)}
+.meta a{color:inherit}
+.drop-on .sheet{outline:3px dashed var(--hot); outline-offset:-10px}
+
+/* 読み返しリスト */
+.lib{display:grid; gap:8px}
+.lib h3{margin:0; font-size:14px; display:flex; align-items:baseline; gap:10px}
+.lib h3 small{font-weight:500; font-size:12px; color:var(--ink-3)}
+.lib ul{list-style:none; margin:0; padding:0; display:grid; gap:6px; max-height:236px; overflow:auto}
+.lib li button{width:100%; text-align:left; font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px;
+  padding:9px 12px; cursor:pointer; display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:center}
+.lib li button:hover{border-color:var(--ink-3)}
+.lib li button:focus-visible{outline:2px solid var(--hot); outline-offset:1px}
+.lib .lt{font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.lib .ls{font-size:12px; color:var(--ink-2); grid-column:1; font-variant-numeric:tabular-nums}
+.lib .lb{grid-row:1 / span 2; grid-column:2; font-family:var(--mono); font-size:11px; font-weight:700; border-radius:7px; padding:4px 8px; white-space:nowrap;
+  background:var(--chip); color:var(--ink-2)}
+.lib .lb.due{background:hsl(var(--h) 88% 58%); color:#12131a}
+.lib li button[disabled]{opacity:.5; cursor:default}
+#openLoad{position:relative}
+#openLoad.due::after{content:""; position:absolute; top:-3px; right:-3px; width:9px; height:9px; border-radius:50%; background:hsl(var(--h) 88% 58%); border:2px solid var(--bg)}
+/* 2周目以降：前回マーカーが引かれた語に点線 */
+.reader.relap .s:not(.read) .k{text-decoration:underline dotted color-mix(in oklab, var(--hot) 70%, transparent); text-decoration-thickness:1.5px; text-underline-offset:.28em}
+
+.done-title{font-family:var(--disp); font-size:44px; line-height:1; color:var(--hot); letter-spacing:.04em}
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+.grid div{background:var(--paper); padding:12px 14px; display:grid; gap:6px}
+.grid span{font-size:11px; color:var(--ink-3); letter-spacing:.08em; font-weight:700}
+.grid b{font-family:var(--mono); font-size:20px; font-variant-numeric:tabular-nums}
+.grid b small{font-size:12px; color:var(--ink-2); font-weight:500; margin-left:3px}
+
+@media (max-width:640px){
+  .docname{display:none}
+  .hud-in{gap:10px; justify-content:space-between}
+  .stats{gap:12px}
+  .xpbar{width:44px}
+  .brand{font-size:17px}
+  #openLoad .t{display:none}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .intro{min-height:44vh}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important; transition-duration:.01ms!important; transition-delay:0s!important}
+}
+</style>
+
+<div class="hud" id="hud">
+  <div class="hud-in">
+    <span class="brand" aria-label="ドパブラウザ">ドパ</span>
+    <span class="docname" id="hudName"></span>
+    <div class="stats" aria-live="polite">
+      <div class="stat"><span class="lab">進捗</span><span class="val" id="hProg">0%</span></div>
+      <div class="stat"><span class="lab">コンボ</span><span class="val" id="hCombo">×0</span></div>
+      <div class="stat lv"><span class="lab">Lv <b id="hLv">1</b></span><span class="xpbar"><i id="hXp"></i></span></div>
+    </div>
+    <button class="btn" id="openLoad" type="button"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg><span class="t">読み込む</span></button>
+    <button class="btn icon" id="openSet" type="button" aria-label="設定" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+  </div>
+  <div class="prog"><i id="hBar"></i></div>
+  <div class="pop" id="setPop" hidden>
+    <div class="field"><span>強調の強さ</span>
+      <div class="seg">
+        <input type="radio" name="str" id="str1" value="0.6"><label for="str1">控えめ</label>
+        <input type="radio" name="str" id="str2" value="1"><label for="str2">標準</label>
+        <input type="radio" name="str" id="str3" value="1.4"><label for="str3">しっかり</label>
+      </div></div>
+    <div class="field"><span>集中モード（読んでいない段落を薄くする）</span>
+      <div class="seg">
+        <input type="radio" name="dim" id="dim1" value="1"><label for="dim1">オフ</label>
+        <input type="radio" name="dim" id="dim2" value="0.72"><label for="dim2">弱</label>
+        <input type="radio" name="dim" id="dim3" value="0.42"><label for="dim3">強</label>
+      </div></div>
+    <div class="field"><span>文字サイズ</span>
+      <div class="seg">
+        <input type="radio" name="size" id="sz1" value="16"><label for="sz1">小</label>
+        <input type="radio" name="size" id="sz2" value="18"><label for="sz2">中</label>
+        <input type="radio" name="size" id="sz3" value="20"><label for="sz3">大</label>
+      </div></div>
+    <div class="field"><span>英単語の前半を太字にする</span>
+      <div class="seg">
+        <input type="radio" name="bionic" id="bi0" value="0"><label for="bi0">オフ</label>
+        <input type="radio" name="bionic" id="bi1" value="1"><label for="bi1">オン</label>
+      </div></div>
+    <div class="field"><span>効果音</span>
+      <div class="seg">
+        <input type="radio" name="sound" id="so0" value="0"><label for="so0">オフ</label>
+        <input type="radio" name="sound" id="so1" value="1"><label for="so1">オン</label>
+      </div></div>
+    <div class="totals"><span>累計 <b id="tXp">0</b> XP ・ 連続 <b id="tDays">0</b> 日 ・ 再読 <b id="tRe">0</b> 回</span><button class="btn ghost" id="resetDoc" type="button">この文章の進捗をリセット</button></div>
+  </div>
+</div>
+
+<main class="wrap">
+  <header class="intro">
+    <div class="eyebrow" id="eyebrow">サンプル</div>
+    <h1 id="docTitle"></h1>
+    <div class="meta" id="meta"></div>
+    <p class="hint">スクロールするか <kbd>Space</kbd> で一文ずつ読み進めてください。読み終えた文の重要語にマーカーが引かれ、終盤に近づくほど色が強くなります。飛ばし読みした文には XP が付きません。別の文章は右上の「読み込む」から開けます。コピーした本文をこのページで <kbd>Ctrl</kbd>+<kbd>V</kbd> しても開きます。</p>
+    <div class="row" id="clipRow"><button class="btn primary" id="clipBtn" type="button">コピーした本文を読む</button><span class="msg" id="clipMsg">一度許可すると、次からは「ドパる」を押すだけで自動で開きます。</span></div>
+  </header>
+  <article class="reader focus" id="reader"></article>
+  <div class="endmark" id="endmark">おわり</div>
+</main>
+
+<nav class="mini" id="mini" aria-label="段落ごとの進み具合"></nav>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<button class="fab" id="fab" type="button">次の文 <kbd>Space</kbd></button>
+
+<div class="sheet-bg" id="loadBg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="loadTitle">
+    <h2 id="loadTitle">読む文章を選ぶ</h2>
+    <section class="lib" id="lib" aria-labelledby="libTitle" hidden>
+      <h3 id="libTitle">読み返す <small>間をあけて読み返すほど XP が増えます</small></h3>
+      <ul id="libList"></ul>
+    </section>
+    <section class="web" aria-labelledby="webTitle">
+      <h3 id="webTitle">Webページから読む</h3>
+      <ol class="steps">
+        <li>下の「ドパる」ボタンをブックマークバーへドラッグします（初回だけ）。ドラッグできないときは「コードをコピー」を押し、新しいブックマークを作って URL 欄に貼り付けてください。
+          <div class="row"><a class="bm" id="bmLink" href="#">ドパる</a><button class="btn" id="bmCopy" type="button">コードをコピー</button><span class="msg" id="bmMsg"></span></div></li>
+        <li>読みたい記事や論文のページを開きます。
+          <div class="row"><input class="inp" id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://arxiv.org/abs/1706.03762"><a class="btn" id="urlGo" target="_blank" rel="noopener" aria-disabled="true">開く</a></div>
+          <div class="msg" id="urlNote"></div></li>
+        <li id="step3">開いたページでブックマークの「ドパる」を押すと本文がコピーされ、ドパブラウザが開いて自動で読み込みます（初回だけ「コピーした本文を読む」を押してクリップボードの利用を許可してください）。自動で開かないときは <kbd>Ctrl</kbd>+<kbd>V</kbd>（Mac は <kbd>⌘</kbd>+<kbd>V</kbd>）で読めます。本文を選択してから押すと、選んだ部分だけを読み込みます。</li>
+      </ol>
+    </section>
+    <div class="or">または本文・ファイルから</div>
+    <p>本文を貼り付けるか、ファイル（.txt / .md / .pdf）を選んでください。このウィンドウにファイルをドロップしても読み込めます。PDF は文字データを含むものに対応しています。スキャン画像だけの PDF は読み込めないので、本文をコピーして貼り付けてください。</p>
+    <textarea id="src" placeholder="ここに論文や記事の本文を貼り付け"></textarea>
+    <div class="row">
+      <label class="btn file">ファイルを選ぶ<input type="file" id="file" accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"></label>
+      <span class="msg" id="fileMsg"></span>
+      <span class="sp"></span>
+      <button class="btn ghost" id="useSample" type="button">サンプルに戻す</button>
+      <button class="btn primary" id="usePaste" type="button">この文章を読む</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="doneBg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+    <div class="done-title" id="doneTitle">読了</div>
+    <p id="doneSub"></p>
+    <div class="grid" id="doneGrid"></div>
+    <div class="row"><span class="sp"></span><button class="btn ghost" id="doneClose" type="button">閉じる</button><button class="btn" id="doneAgain" type="button">もう一度読む</button><button class="btn primary" id="doneNext" type="button">次の文章を読む</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d }catch(e){ return d } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} }
+};
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MS_PER_CHAR = 20;          // これより速く通過した文は「飛ばし読み」扱い
+const CJK = /[　-ヿ㐀-鿿豈-﫿＀-￯]/;
+
+const SAMPLE = `# 報酬予測誤差とドーパミン：「驚き」は学習信号である
+
+## 概要
+中脳のドーパミンニューロンは、報酬そのものではなく「予測と結果のずれ」に応答する。本稿では、1990年代にサルの電気生理実験で示されたこの知見を、強化学習の時間差学習（TD学習）と対応づけて整理する。そのうえで、この枠組みを長い文章を読む行為に当てはめたときに何が言えて、何が言えないのかを検討する。
+
+## 1. はじめに
+ドーパミンは「快楽物質」と呼ばれることが多い。しかし神経科学の研究が示してきたのは、もう少し込み入った姿である。ドーパミンニューロンの発火は、報酬を受け取ったときよりも、報酬が予想外だったときに強く現れる。つまりドーパミンは、世界についての予測を更新するための信号として働いている可能性が高い。
+
+この見方は、神経科学と機械学習という別々の分野が同じ数式にたどり着いたという点でも興味深い。以下では実験、理論、応用の順に見ていく。
+
+## 2. 報酬予測誤差の発見
+ヴォルフラム・シュルツらは、サルに光や音の手がかりを提示し、その少し後にジュースを与える課題を行った。学習の初期には、ドーパミンニューロンはジュースが口に届いた瞬間に一過性のバースト発火を示した。
+
+ところが手がかりとジュースの関係を学習すると、応答はジュースの時点から手がかりの時点へと移った。報酬が確実に予測できるようになると、報酬そのものにはほとんど反応しなくなったのである。
+
+さらに、手がかりの後に予定されていたジュースを与えないと、本来ジュースが来るはずの時刻に発火は基線より低下した。予想より良ければ増え、予想どおりなら変わらず、予想より悪ければ減る。この三つの応答パターンが「報酬予測誤差」という考え方の中心にある。
+
+## 3. TD学習との対応
+1997年、シュルツ、ダヤン、モンタギューは『Science』誌の論文で、この応答パターンが強化学習の時間差学習で使われる誤差信号とよく一致することを示した。TD学習では、ある状態の価値 V(s) を、次の状態の価値と得られた報酬をもとに少しずつ修正していく。
+
+その修正量が TD誤差 δ = r + γV(s′) − V(s) である。r は受け取った報酬、γ は将来の価値をどれだけ割り引くかを決める割引率を表す。学習が進むと V は手がかりの時点で上がり、報酬の時点での δ はゼロに近づく。これは、学習後のドーパミン応答が手がかりへ移るという実験結果とそのまま対応する。
+
+ただし、ドーパミンの働きをすべて予測誤差で説明できるわけではない。ケント・ベリッジらは、ドーパミンが「好き（liking）」よりも「欲しい（wanting）」、すなわち誘因的顕著性に関わると主張している。二つの立場は対立するというより、同じ系の異なる側面を捉えていると考える研究者も多い。
+
+## 4. 読書への含意
+長い論文を読むとき、報酬はふつう最後にしか来ない。結論にたどり着くまでの数十分間、脳から見れば予測を上回る出来事はほとんど起きていないことになる。途中で飽きやすいのは、意志の弱さだけでなく、この報酬の遅さにも原因があるかもしれない。
+
+ひとつの工夫は、読み進めた量を小さく、すぐに、目に見える形で返すことである。一文を読み終えるたびに重要語に印がつき、段落を終えると進捗が埋まる。予測誤差の考え方に従えば、毎回まったく同じ報酬はやがて予測されて効果が薄れるので、節の区切りやレベルの上昇のように、ときどき大きめの変化を混ぜるほうがよい。
+
+一方で注意も必要である。報酬を速く読むことに結びつけると、理解より速度を優先する行動が強化されてしまう。そのため、ある程度の時間をかけて読んだ文にだけ報酬を与え、明らかに飛ばし読みした部分には与えないという設計が考えられる。
+
+## 5. 限界と今後
+ここで述べた読書への応用は、実験で確かめられた効果ではなく、報酬予測誤差の枠組みから導いた設計上の仮説である。画面上の小さな報酬が実際にドーパミン応答を引き起こすのか、理解度を高めるのかは、別途検証しなければならない。
+
+それでも、「飽きる」という感覚を予測と結果のずれとして捉え直すと、退屈な文章に向き合うための具体的な手がかりが得られる。まずはこの文章を最後まで読んで、自分に効くかどうかを確かめてほしい。`;
+
+/* ---------------- settings & global ---------------- */
+let S = Object.assign({str:1, dim:0.72, size:18, bionic:false, sound:false}, store.get('dopa:settings', {}));
+let G = Object.assign({xp:0, days:[], rereads:0}, store.get('dopa:global', {}));
+const cloud = {ref:null, docs:null, timer:0, busy:false, again:false, known:new Set(), art:{}};
+const DAY = 86400000;
+const INTERVALS = [1, 3, 7, 14, 30];   // 読了回数ごとの「次に読み返すとよい」日数
+// 前回の読了からの間隔で XP 倍率を決める（間隔効果：少しあけて思い出すほど記憶に残る）
+function spacingMult(ms){ const h = ms / 3600000; return h < 20 ? 0.5 : h < 60 ? 1.2 : h < 24 * 7 ? 1.5 : 2; }
+function nextGap(pass){ return INTERVALS[Math.min(Math.max(pass, 1) - 1, INTERVALS.length - 1)]; }
+function agoText(ms){ const d = Math.floor(ms / DAY); if(d >= 1) return `${d}日前`; const h = Math.floor(ms / 3600000); return h >= 1 ? `${h}時間前` : 'さっき'; }
+function gapText(ms){ const d = Math.floor(ms / DAY); if(d >= 1) return `${d}日`; const h = Math.floor(ms / 3600000); return h >= 1 ? `${h}時間` : '数分'; }
+const fmtMult = m => '×' + (Math.round(m * 10) / 10).toFixed(1);
+const root = document.documentElement;
+
+function applySettings(){
+  root.style.setProperty('--str', S.str);
+  root.style.setProperty('--dim', S.dim);
+  root.style.setProperty('--fs', S.size + 'px');
+  const pick = (name, v) => { const el = [...document.querySelectorAll(`input[name="${name}"]`)].find(i => String(i.value) === String(v)); if(el) el.checked = true; };
+  pick('str', S.str); pick('dim', S.dim); pick('size', S.size); pick('bionic', S.bionic ? 1 : 0); pick('sound', S.sound ? 1 : 0);
+}
+
+/* ---------------- parsing ---------------- */
+const HEAD_WORDS = /^(abstract|introduction|background|methods?|materials and methods|results?|discussion|conclusions?|references|acknowledge?ments|related work|limitations|概要|要旨|要約|はじめに|序論|背景|方法|手法|結果|考察|結論|おわりに|参考文献|謝辞)$/i;
+function isHeadingLine(l){
+  const t = l.trim();
+  if(t.length < 2 || t.length > 60) return false;
+  if(/[。．.!?！？:：,、;]$/.test(t)) return false;
+  if(HEAD_WORDS.test(t.replace(/^(\d+(\.\d+)*\.?|[IVX]+\.)\s*/, ''))) return true;
+  return /^(\d+(\.\d+)*\.?|[IVX]+\.)\s+\S/.test(t) && t.length < 48;
+}
+function stripMd(s){
+  return s.replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2').replace(/`([^`]+)`/g, '$1');
+}
+function smartJoin(a, b){
+  if(!a) return b; if(!b) return a;
+  const x = a.slice(-1), y = b[0];
+  if(/[a-z]-$/.test(a) && /[a-z]/.test(y)) return a.slice(0, -1) + b;
+  if(CJK.test(x) || CJK.test(y)) return a + b;
+  return a + ' ' + b;
+}
+function parsePlain(src){
+  src = src.replace(/\r\n?/g, '\n').replace(/ /g, ' ');
+  const hasBlank = /\n[ \t]*\n/.test(src);
+  const blocks = []; let buf = [];
+  const pushPara = ls => {
+    if(ls.length === 1 && isHeadingLine(ls[0])){ blocks.push({type:'h', level:2, text:ls[0].trim()}); return; }
+    const t = ls.map(l => stripMd(l.trim())).reduce(smartJoin, '').trim();
+    if(t) blocks.push({type:'p', text:t});
+  };
+  const flush = () => {
+    if(!buf.length) return;
+    if(!hasBlank && buf.length > 3){
+      const term = buf.filter(l => /[。．.!?！？」)]\s*$/.test(l)).length / buf.length;
+      if(term > 0.6) buf.forEach(l => pushPara([l]));
+      else hardWrapped(buf).forEach(pushPara);
+    } else pushPara(buf);
+    buf = [];
+  };
+  for(const l of src.split('\n')){
+    const m = l.match(/^\s*(#{1,6})\s+(.*)$/);
+    if(m){ flush(); blocks.push({type:'h', level: m[1].length === 1 ? 1 : 2, text: stripMd(m[2].trim())}); continue; }
+    if(!l.trim()){ flush(); continue; }
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ flush(); continue; }
+    buf.push(l.replace(/^\s*(?:[-*+]|>)\s+/, ''));
+  }
+  flush();
+  return blocks;
+}
+function hardWrapped(ls){
+  const lens = ls.map(l => l.trim().length).sort((a, b) => a - b);
+  const med = lens[lens.length >> 1] || 1;
+  const out = []; let cur = [];
+  for(const l of ls){
+    const t = l.trim(); if(!t) continue;
+    if(isHeadingLine(t) && t.length < med * 0.75){ if(cur.length) out.push(cur); out.push([t]); cur = []; continue; }
+    cur.push(t);
+    if(/[。．.!?！？」)]$/.test(t) && t.length < med * 0.8){ out.push(cur); cur = []; }
+  }
+  if(cur.length) out.push(cur);
+  return out;
+}
+const ABBR = /(?:\b(?:e\.g|i\.e|et al|Fig|Figs|Eq|Eqs|vs|cf|Dr|Mr|Ms|Mrs|No|Ref|Refs|Sec|approx|resp|Tab|Vol|pp)\.|\b[A-Z]\.)$/;
+function splitSentences(t){
+  const parts = t.match(/[^。．！？]*[。．！？]+[」』）)]*|[^。．！？]+$/g) || [t];
+  const out = [];
+  for(const part of parts){
+    let start = 0, m;
+    const re = /[.!?][)"”’\]]*(\s+)(?=[A-Z“"(\[])/g;
+    while((m = re.exec(part))){
+      const end = m.index + m[0].length - m[1].length;
+      if(ABBR.test(part.slice(start, end))) continue;
+      out.push(part.slice(start, m.index + m[0].length));
+      start = m.index + m[0].length;
+    }
+    if(start < part.length) out.push(part.slice(start));
+  }
+  const merged = [];
+  for(const s of out){
+    if(!s.trim()) { if(merged.length) merged[merged.length-1] += s; continue; }
+    if(merged.length && s.replace(/\s/g, '').length < 4) merged[merged.length-1] += s;
+    else merged.push(s);
+  }
+  // 英文の文間スペースを保つ
+  for(let i = 0; i < merged.length - 1; i++){
+    const a = merged[i], b = merged[i+1];
+    if(!/\s$/.test(a) && !CJK.test(a.slice(-1)) && !CJK.test(b[0])) merged[i] = a + ' ';
+  }
+  return merged;
+}
+
+/* ---------------- PDF ---------------- */
+function loadScript(src){
+  return new Promise((ok, ng) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => ng(new Error('script')); document.head.appendChild(s); });
+}
+async function ensurePdf(){
+  if(window.pdfjsLib) return;
+  const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/';
+  await loadScript(base + 'pdf.worker.min.js');   // メインスレッドで動かす
+  await loadScript(base + 'pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
+}
+async function parsePdf(buf, onProgress){
+  await ensurePdf();
+  const pdf = await window.pdfjsLib.getDocument({data: new Uint8Array(buf), isEvalSupported:false}).promise;
+  const allLines = [];
+  for(let p = 1; p <= pdf.numPages; p++){
+    onProgress && onProgress(p, pdf.numPages);
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const lines = [];
+    for(const it of tc.items){
+      if(typeof it.str !== 'string') continue;
+      const y = it.transform[5], h = Math.abs(it.transform[3]) || it.height || 10;
+      const last = lines[lines.length - 1];
+      if(last && !last.eol && Math.abs(last.y - y) < Math.max(2, h * 0.5)){ last.t += it.str; last.h = Math.max(last.h, h); }
+      else if(it.str.trim()) lines.push({t: it.str, y, h, eol:false, page:p});
+      if(it.hasEOL && lines.length) lines[lines.length - 1].eol = true;
+    }
+    lines.forEach(l => { l.t = l.t.replace(/\s+/g, ' ').trim(); });
+    allLines.push(...lines.filter(l => l.t && !/^\d{1,4}$/.test(l.t)));
+  }
+  if(!allLines.length) throw new Error('empty');
+  const hs = allLines.map(l => l.h).sort((a, b) => a - b), medH = hs[hs.length >> 1];
+  const lens = allLines.map(l => l.t.length).sort((a, b) => a - b), medLen = lens[lens.length >> 1];
+  const gaps = [];
+  for(let i = 1; i < allLines.length; i++){ const d = allLines[i-1].y - allLines[i].y; if(d > 0 && allLines[i].page === allLines[i-1].page) gaps.push(d); }
+  gaps.sort((a, b) => a - b); const medGap = gaps[gaps.length >> 1] || medH * 1.4;
+  const blocks = []; let cur = []; let titleDone = false;
+  const flush = () => { if(cur.length){ const t = cur.reduce(smartJoin, '').trim(); if(t) blocks.push({type:'p', text:t}); cur = []; } };
+  for(let i = 0; i < allLines.length; i++){
+    const l = allLines[i], prev = allLines[i-1];
+    const big = l.h > medH * 1.18 && l.t.length < 90;
+    if(big || (isHeadingLine(l.t) && l.t.length < medLen * 0.7)){
+      flush();
+      const lastB = blocks[blocks.length - 1];
+      if(lastB && lastB.type === 'h' && lastB._y !== undefined && prev && prev.page === l.page && Math.abs(lastB._y - l.y) < l.h * 2.2 && Math.abs(lastB._h - l.h) < 1){ lastB.text = smartJoin(lastB.text, l.t); lastB._y = l.y; continue; }
+      const level = (!titleDone && l.page === 1 && l.h > medH * 1.5) ? 1 : 2;
+      if(level === 1) titleDone = true;
+      blocks.push({type:'h', level, text:l.t, _y:l.y, _h:l.h});
+      continue;
+    }
+    if(prev && cur.length){
+      const samePage = prev.page === l.page, d = prev.y - l.y;
+      const gapBreak = samePage && d > medGap * 1.5;
+      const endBreak = /[。．.!?！？」)]$/.test(prev.t) && prev.t.length < medLen * 0.75;
+      if(gapBreak || endBreak) flush();
+    }
+    cur.push(l.t);
+  }
+  flush();
+  return {blocks, pages: pdf.numPages};
+}
+
+/* ---------------- rendering ---------------- */
+const KW = /「[^「」\n]{1,24}」|『[^『』\n]{1,30}』|\b[A-Z][A-Z0-9]+(?:[-–][A-Z0-9]+)*s?\b|[ァ-ヶ][ァ-ヶー・]{3,}|\d+(?:[.,]\d+)*\s?(?:%|％|倍|ms|Hz|kHz|年|歳|人|名|件|回|個|点|秒|分|日|週|か月|ヶ月|mm|cm|km|kg|mg|字|ページ)|\d{2,}(?:\.\d+)?|\d\.\d+/g;
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function plain(s){
+  s = esc(s);
+  if(S.bionic) s = s.replace(/\b[A-Za-z]{4,}\b/g, w => { const n = Math.ceil(w.length * 0.45); return `<b class="bi">${w.slice(0, n)}</b>${w.slice(n)}`; });
+  return s;
+}
+function fmt(t, seen){
+  let out = '', last = 0, i = 0, m;
+  KW.lastIndex = 0;
+  while((m = KW.exec(t))){
+    const w = m[0], key = w.toLowerCase();
+    out += plain(t.slice(last, m.index));
+    if(seen.has(key)) out += plain(w);
+    else { seen.add(key); out += `<span class="k" style="--i:${i++}">${esc(w)}</span>`; }
+    last = m.index + w.length;
+  }
+  return out + plain(t.slice(last));
+}
+
+let doc = null;       // {key, title, kind, blocks, sents, totalChars, sections}
+let D = null;         // per-doc saved state
+let cur = -1, lastT = performance.now(), combo = 0, readChars = 0, endTop = Infinity;
+const reader = $('#reader');
+
+function hash(str){ let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+
+function buildDoc(blocks, meta){
+  let title = meta.name;
+  const firstH1 = blocks.findIndex(b => b.type === 'h' && b.level === 1);
+  if(firstH1 >= 0){ title = blocks[firstH1].text; blocks.splice(firstH1, 1); }
+  const sents = []; const sections = []; let sec = null;
+  blocks.forEach((b, bi) => {
+    b.bi = bi;
+    if(b.type === 'h'){ sec = {bi, paras:[], chars:0}; sections.push(sec); b.sec = sec; return; }
+    b.sents = []; b.chars = 0; b.sec = sec;
+    for(const t of splitSentences(b.text)){
+      const len = t.replace(/\s/g, '').length || 1;
+      b.sents.push(sents.length); sents.push({text:t, len, bi, st:0, top:0, el:null});
+      b.chars += len;
+    }
+    if(sec){ sec.paras.push(bi); sec.chars += b.chars; }
+  });
+  const totalChars = sents.reduce((a, s) => a + s.len, 0);
+  const key = 'dopa:doc:' + hash(blocks.map(b => b.text).join('\n') + title);
+  return {key, title, kind: meta.kind, pages: meta.pages, blocks, sents, sections, totalChars};
+}
+
+function render(){
+  const {blocks, sents} = doc;
+  let html = '';
+  blocks.forEach(b => {
+    if(b.type === 'h'){
+      html += `<h2 class="h" id="b${b.bi}"><span>${esc(b.text)}</span>${b.sec && b.sec.paras.length ? `<span class="secmeta" id="sm${b.bi}"></span>` : ''}</h2>`;
+    } else {
+      const seen = new Set();
+      html += `<p class="p" id="b${b.bi}">` + b.sents.map(i => {
+        const s = sents[i]; const cls = s.st === 1 ? ' read' : s.st === 2 ? ' skim' : '';
+        return `<span class="s${cls}" id="s${i}">${fmt(s.text, seen)}</span>`;
+      }).join('') + '</p>';
+    }
+  });
+  reader.innerHTML = html;
+  sents.forEach((s, i) => s.el = document.getElementById('s' + i));
+  blocks.forEach(b => b.el = document.getElementById('b' + b.bi));
+  // minimap
+  const mini = $('#mini');
+  mini.innerHTML = blocks.filter(b => b.type === 'p').map(b => `<i data-b="${b.bi}" tabindex="-1" style="--g:${Math.max(b.chars, 20)}"></i>`).join('');
+  blocks.forEach(b => { if(b.type === 'p') b.mini = mini.querySelector(`[data-b="${b.bi}"]`); });
+  blocks.forEach(b => { if(b.type === 'p') refreshBlock(b, true); });
+  doc.sections.forEach(sec => refreshSection(sec, true));
+  if(cur >= 0 && cur < sents.length) markCur(cur, -2);
+}
+
+function measure(){
+  if(!doc) return;
+  const y0 = scrollY;
+  for(const s of doc.sents) s.top = s.el.getBoundingClientRect().top + y0;
+  endTop = $('#endmark').getBoundingClientRect().top + y0;
+}
+
+/* ---------------- state ---------------- */
+function loadDocState(){
+  const saved = store.get(doc.key, null);
+  D = {st:'', xp:0, maxCombo:0, cred:0, time:0, ms:{}, done:false, pass:0, lastDone:0, mult:1, laps:[]};
+  if(saved) Object.assign(D, saved);
+  if(!Array.isArray(D.laps)) D.laps = [];
+  if(D.done && !D.pass){ D.pass = 1; D.lastDone = D.lastDone || Date.now(); }   // 以前のデータ
+  lapBonus = 0;
+  if(D.done) startLap();   // 読み終えた文章をもう一度開いたら次の周回へ
+  readChars = 0;
+  doc.sents.forEach((s, i) => { s.st = +(D.st[i] || 0); if(s.st) readChars += s.len; });
+}
+let lapBonus = 0;
+function startLap(){
+  D.mult = D.lastDone ? spacingMult(Date.now() - D.lastDone) : 1;
+  D.st = ''; D.done = false; D.ms = {}; D.xp = 0; D.cred = 0; D.time = 0; D.maxCombo = 0;
+  D.lapStart = Date.now();
+}
+function lapNo(){ return (D && D.pass || 0) + (D && D.done ? 0 : 1); }
+function completeLap(){
+  D.done = true; D.pass = (D.pass || 0) + 1;
+  D.laps.push({at:Date.now(), cred:D.cred, time:Math.round(D.time), xp:D.xp}); D.laps = D.laps.slice(-30);
+  lapBonus = 0;
+  if(D.pass >= 2){
+    G.rereads = (G.rereads || 0) + 1;
+    if(D.cred >= doc.totalChars * 0.5){ lapBonus = Math.round((60 + doc.totalChars / 25) * (D.mult || 1)); addXP(lapBonus); }
+  }
+  D.lastDone = Date.now();
+  saveSoon();
+  setTimeout(showDone, 700);
+}
+let saveTimer = 0;
+function saveSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if(!doc) return;
+    D.st = doc.sents.map(s => s.st).join('');
+    store.set(doc.key, D); store.set('dopa:global', G); cloudSave(); libUpsert();
+  }, 700);
+}
+
+function levelOf(x){ let l = 1, need = 400; while(x >= need){ x -= need; l++; need = 400 + (l - 1) * 150; } return {l, cur:x, need}; }
+function today(){ const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+function streak(){
+  const set = new Set(G.days); let n = 0; const d = new Date();
+  while(set.has(`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`)){ n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+function setState(i, st){
+  const s = doc.sents[i];
+  if(s.st === 0) readChars += s.len;
+  s.st = st;
+  s.el.classList.toggle('read', st === 1);
+  s.el.classList.toggle('skim', st === 2);
+}
+
+function refreshBlock(b, silent){
+  let done = 0, cred = 0;
+  for(const i of b.sents){ const s = doc.sents[i]; if(s.st){ done += s.len; if(s.st === 1) cred += s.len; } }
+  const pf = b.chars ? Math.round(done / b.chars * 100) : 0;
+  if(b.mini){ b.mini.style.setProperty('--pf', pf + '%'); b.mini.classList.toggle('skimmy', done > 0 && cred < done * 0.5); }
+  const wasDone = b.done; b.done = pf >= 100;
+  if(b.done && !wasDone && !silent && cred > 0){
+    const last = doc.sents[b.sents[b.sents.length - 1]].el;
+    const rects = last.getClientRects(); const r = rects[rects.length - 1];
+    if(r && r.bottom > 0 && r.top < innerHeight) burst(r.right, r.top + r.height / 2, 14);
+    tone(784, 0, .16, .035); tone(1046.5, .07, .2, .03);
+  }
+}
+function refreshSection(sec, silent){
+  const h = doc.blocks[sec.bi]; const sm = document.getElementById('sm' + sec.bi);
+  if(!sec.paras.length) return;
+  const doneParas = sec.paras.filter(bi => doc.blocks[bi].done).length;
+  const wasDone = sec.done; sec.done = doneParas === sec.paras.length;
+  if(sm) sm.textContent = sec.done ? '読了' : `${doneParas}/${sec.paras.length} 段落 ・ ${sec.chars.toLocaleString()} 字`;
+  h.el.classList.toggle('done', !!sec.done);
+  if(sec.done && !wasDone && !silent){
+    let cred = 0; sec.paras.forEach(bi => doc.blocks[bi].sents.forEach(i => { if(doc.sents[i].st === 1) cred += doc.sents[i].len; }));
+    if(cred >= sec.chars * 0.5){ const bonus = Math.round((30 + sec.chars / 40) * (D.mult || 1)); addXP(bonus); toast('節クリア', `「${h.text}」`, `+${bonus} XP のボーナス`); }
+    else toast('節を通過', `「${h.text}」`, '飛ばした部分が多いのでボーナスなし');
+  }
+}
+
+function addXP(g){
+  const before = levelOf(G.xp).l;
+  G.xp += g; D.xp += g;
+  const t = today(); if(!G.days.includes(t)){ G.days.push(t); G.days = G.days.slice(-120); }
+  const after = levelOf(G.xp).l;
+  if(after > before){
+    toast('LEVEL UP', `レベル ${after} に到達`, `累計 ${G.xp.toLocaleString()} XP`);
+    [0, 4, 7, 12].forEach((n, k) => tone(523.25 * Math.pow(2, n / 12), k * .09, .22, .045));
+    bump('#hLv');
+  }
+}
+
+/* ---------------- reading engine ---------------- */
+function focusY(){ return innerHeight * 0.38; }
+let raf = 0;
+function onScroll(){ if(!raf) raf = requestAnimationFrame(update); }
+function update(){
+  raf = 0; if(!doc) return;
+  const y = scrollY + focusY();
+  const ss = doc.sents; let lo = 0, hi = ss.length - 1, idx = -1;
+  while(lo <= hi){ const m = (lo + hi) >> 1; if(ss[m].top <= y){ idx = m; lo = m + 1; } else hi = m - 1; }
+  if(idx === ss.length - 1 && y >= endTop) idx = ss.length;
+  if(idx === cur) return;
+  const now = performance.now();
+  if(idx > cur) advance(cur, idx, now); else lastT = now;
+  markCur(idx, cur);
+  hud();
+}
+function markCur(idx, prev){
+  const ss = doc.sents;
+  if(prev >= 0 && prev < ss.length){ ss[prev].el.classList.remove('cur'); const pb = doc.blocks[ss[prev].bi]; pb.el.classList.remove('curp'); if(pb.mini) pb.mini.classList.remove('cur'); }
+  document.querySelectorAll('.curp').forEach(e => e.classList.remove('curp'));
+  cur = idx;
+  reader.classList.toggle('active', idx >= 0 && idx < ss.length);
+  if(idx >= 0 && idx < ss.length){
+    ss[idx].el.classList.add('cur');
+    const b = doc.blocks[ss[idx].bi]; b.el.classList.add('curp'); if(b.mini) b.mini.classList.add('cur');
+  }
+}
+function advance(from, to, now){
+  const ss = doc.sents; const list = [];
+  for(let i = Math.max(0, from); i < Math.min(to, ss.length); i++) if(ss[i].st === 0) list.push(i);
+  const el = now - lastT; lastT = now;
+  if(!list.length) return;
+  D.time += Math.min(el, 90000);
+  if(el > 180000) combo = 0;
+  let budget = el, gain = 0, credited = 0, skimmed = 0;
+  const touched = new Set();
+  for(const i of list){
+    const need = ss[i].len * MS_PER_CHAR;
+    if(budget >= need){
+      budget -= need; combo++; credited++;
+      const g = Math.round(ss[i].len * (1 + Math.min(combo, 50) * 0.02) * (D.mult || 1));
+      gain += g; D.cred += ss[i].len; setState(i, 1);
+      if([10, 25, 50, 100, 200].includes(combo)) toast('COMBO', `${combo} 文連続`, `倍率 ×${(1 + Math.min(combo, 50) * .02).toFixed(2)}`);
+    } else { setState(i, 2); skimmed++; }
+    touched.add(ss[i].bi);
+  }
+  if(skimmed){
+    if(combo >= 8) toast('コンボ終了', `${combo} 文で途切れました`, 'ゆっくり読んだ文だけがコンボになります');
+    combo = 0;
+  }
+  D.maxCombo = Math.max(D.maxCombo, combo);
+  if(gain){ addXP(gain); floatXP(gain, combo); blip(combo); bump('#hCombo'); }
+  touched.forEach(bi => refreshBlock(doc.blocks[bi]));
+  const secs = new Set([...touched].map(bi => doc.blocks[bi].sec).filter(Boolean));
+  secs.forEach(sec => refreshSection(sec));
+  milestones();
+  saveSoon();
+}
+function milestones(){
+  const p = readChars / doc.totalChars;
+  for(const m of [25, 50, 75]){
+    if(p * 100 >= m && !D.ms[m]){ D.ms[m] = 1; toast(`${m}%`, m === 50 ? '折り返し地点' : m === 25 ? '4分の1を読みました' : '残り4分の1', `この文章で ${D.xp.toLocaleString()} XP`); tone(659.25, 0, .18, .04); tone(987.77, .08, .24, .035); }
+  }
+  if(p >= 0.999 && !D.done) completeLap();
+}
+function goTo(i){
+  if(!doc) return;
+  const n = doc.sents.length;
+  const top = i >= n ? endTop : doc.sents[Math.max(0, i)].top;
+  window.scrollTo({top: top - focusY() + 2, behavior: reduce ? 'auto' : 'smooth'});
+}
+
+/* ---------------- HUD & feedback ---------------- */
+function hueAt(p){ return p < .5 ? 195 + 135 * (p / .5) : (330 + 70 * ((p - .5) / .5)) % 360; }
+function hud(){
+  if(!doc) return;
+  const p = doc.totalChars ? readChars / doc.totalChars : 0;
+  root.style.setProperty('--h', hueAt(p).toFixed(1));
+  root.style.setProperty('--heat', (0.42 + 0.58 * p).toFixed(3));
+  $('#hProg').textContent = Math.floor(p * 100) + '%';
+  $('#hBar').style.width = (p * 100).toFixed(2) + '%';
+  $('#hCombo').textContent = '×' + combo;
+  const lv = levelOf(G.xp);
+  $('#hLv').textContent = lv.l;
+  $('#hXp').style.width = (lv.cur / lv.need * 100).toFixed(1) + '%';
+  $('#tXp').textContent = G.xp.toLocaleString();
+  $('#tDays').textContent = streak();
+  $('#tRe').textContent = (G.rereads || 0).toLocaleString();
+}
+function bump(sel){ if(reduce) return; const e = $(sel); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
+function floatXP(g, c){
+  const f = document.createElement('div'); f.className = 'fl';
+  f.innerHTML = `+${g}${c >= 5 ? `<small>×${(1 + Math.min(c, 50) * .02).toFixed(2)}</small>` : ''}`;
+  const r = reader.getBoundingClientRect();
+  const x = Math.min(r.right + 14, innerWidth - 90);
+  f.style.left = x + 'px'; f.style.top = (focusY() - 10) + 'px';
+  document.body.appendChild(f); setTimeout(() => f.remove(), 1300);
+}
+function toast(tag, title, sub){
+  const box = $('#toasts');
+  const t = document.createElement('div'); t.className = 'toast';
+  t.innerHTML = `<span class="tag">${esc(tag)}</span><div><b>${esc(title)}</b>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</div>`;
+  box.appendChild(t); while(box.children.length > 3) box.firstChild.remove();
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* particles */
+const cv = $('#fx'), cx = cv.getContext('2d'); let parts = [], fxOn = false;
+function resizeFx(){ const d = window.devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+function burst(x, y, n){
+  if(reduce) return;
+  const h = parseFloat(getComputedStyle(root).getPropertyValue('--h')) || 195;
+  for(let i = 0; i < n; i++) parts.push({x, y, vx:(Math.random() - .5) * 4.2, vy:-Math.random() * 3.2 - .8, life:1, h:h + Math.random() * 50 - 25, r:1.6 + Math.random() * 2.2});
+  if(!fxOn){ fxOn = true; requestAnimationFrame(fxLoop); }
+}
+function fxLoop(){
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter(p => p.life > 0);
+  for(const p of parts){
+    p.x += p.vx; p.y += p.vy; p.vy += .13; p.life -= .024;
+    cx.globalAlpha = Math.max(0, p.life); cx.fillStyle = `hsl(${p.h} 90% 60%)`;
+    cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill();
+  }
+  cx.globalAlpha = 1;
+  if(parts.length) requestAnimationFrame(fxLoop); else { fxOn = false; cx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+
+/* sound */
+let ac = null;
+function tone(f, t = 0, d = .12, v = .05){
+  if(!S.sound) return;
+  try{
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f;
+    const st = ac.currentTime + t;
+    g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(v, st + .012); g.gain.exponentialRampToValueAtTime(.0001, st + d);
+    o.connect(g).connect(ac.destination); o.start(st); o.stop(st + d + .03);
+  }catch(e){}
+}
+const PENT = [0, 2, 4, 7, 9];
+function blip(c){ const k = Math.max(0, c - 1); const n = PENT[k % 5] + 12 * (Math.floor(k / 5) % 2); tone(523.25 * Math.pow(2, n / 12), 0, .1, .035); }
+
+/* ---------------- done sheet ---------------- */
+function fmtTime(ms){ const m = Math.floor(ms / 60000), s = Math.round(ms % 60000 / 1000); return m ? `${m}<small>分</small>${s}<small>秒</small>` : `${s}<small>秒</small>`; }
+function showDone(){
+  const mins = Math.max(D.time / 60000, 0.05);
+  const rate = Math.round(D.cred / mins);
+  const ratio = Math.round(D.cred / doc.totalChars * 100);
+  const pass = D.pass || 1, gap = nextGap(pass), nm = spacingMult(gap * DAY);
+  $('#doneTitle').textContent = pass >= 2 ? `${pass}周目 読了` : '読了';
+  $('#doneSub').textContent = `「${doc.title}」を${pass >= 2 ? pass + '回' : '最後まで'}読みました。`
+    + (ratio >= 80 ? 'ほとんどの文をじっくり読めています。' : '飛ばした文はマーカーなしで残っています。')
+    + (lapBonus ? `周回ボーナス +${lapBonus.toLocaleString()} XP。` : (pass >= 2 ? '飛ばし読みが多かったので周回ボーナスはありません。' : ''))
+    + `次は${gap}日後くらいに読み返すと XP ${fmtMult(nm)} です。`;
+  const cells = [
+    ['周回', `${pass}<small>周目</small>`],
+    ['読書時間', fmtTime(D.time)],
+    ['速さ', `${rate.toLocaleString()}<small>字/分</small>`],
+    ['じっくり率', `${ratio}<small>%</small>`],
+    ['最大コンボ', `${D.maxCombo}<small>文</small>`],
+    ['獲得 XP', `${D.xp.toLocaleString()}`],
+  ];
+  $('#doneGrid').innerHTML = cells.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  $('#doneBg').hidden = false;
+  if(!reduce){ for(let k = 0; k < 4; k++) setTimeout(() => burst(innerWidth * (.2 + .2 * k), innerHeight * .35, 22), k * 140); }
+  [0, 4, 7, 12, 16].forEach((n, k) => tone(523.25 * Math.pow(2, n / 12), k * .1, .3, .04));
+  $('#doneClose').focus();
+}
+
+/* ---------------- loading ---------------- */
+function openDoc(blocks, meta){
+  if(!blocks.some(b => b.type === 'p')){ throw new Error('nop'); }
+  if(doc) saveNow();
+  doc = buildDoc(blocks, meta);
+  loadDocState();
+  cur = -1; combo = 0; lastT = performance.now();
+  $('#docTitle').textContent = doc.title;
+  $('#hudName').textContent = doc.title;
+  doc.meta = meta;
+  const lap = lapNo();
+  $('#eyebrow').textContent = meta.kind + (lap >= 2 ? ` ・ ${lap}周目 ・ XP ${fmtMult(D.mult || 1)}` : '');
+  reader.classList.toggle('relap', (D.pass || 0) > 0);
+  const mins = Math.max(1, Math.round(doc.totalChars / 600));
+  $('#meta').innerHTML = `<span>${doc.totalChars.toLocaleString()} 字</span><span>${doc.sents.length} 文</span><span>目安 ${mins} 分</span>` + (doc.pages ? `<span>${doc.pages} ページ</span>` : '') + (meta.src ? `<span><a href="${meta.src.replace(/"/g, '%22').replace(/</g, '%3C')}" target="_blank" rel="noopener">元のページ</a></span>` : '');
+  doc.meta = meta;
+  render();
+  measure();
+  hud();
+  scrollTo({top:0, behavior:'auto'});
+  const firstUnread = doc.sents.findIndex(s => s.st === 0);
+  if(readChars > 0 && firstUnread > 0){
+    measure();
+    markCur(firstUnread - 1, -2);
+    requestAnimationFrame(() => { goTo(firstUnread - 1); lastT = performance.now(); });
+    toast('続きから', `${Math.floor(readChars / doc.totalChars * 100)}% 読んだところから再開`, '設定から進捗をリセットできます');
+  } else if(lap >= 2){
+    const m = D.mult || 1;
+    toast(`${lap}周目`, `前回の読了から${gapText(Date.now() - D.lastDone)}`, m < 1 ? `同じ日の読み返しは XP ${fmtMult(m)}。1日あけると増えます` : `間隔ボーナス XP ${fmtMult(m)}`);
+  }
+  libUpsert();
+  document.fonts && document.fonts.ready.then(() => { measure(); onScroll(); });
+}
+function saveNow(){ if(!doc || !D) return; D.st = doc.sents.map(s => s.st).join(''); store.set(doc.key, D); store.set('dopa:global', G); libUpsert(); if(cloud.ref){ clearTimeout(cloud.timer); cloud.ref.set(profileBody()).catch(() => {}); if(doc) cloudSaveArticle(doc.key, true); } }
+function profileBody(){ return {v:1, settings:Object.assign({}, S), global:{xp:G.xp, days:G.days.slice(-120), rereads:G.rereads || 0}, at:Date.now()}; }
+
+/* ---------- 読み返しリスト（読んだ文章を覚えておく） ---------- */
+const LIB_MAX = 40;
+const artId = k => 'd-' + k.replace(/^dopa:doc:/, '');
+function libGet(){ const l = store.get('dopa:lib', []); return Array.isArray(l) ? l : []; }
+function docBlocks(){ return [{type:'h', level:1, text:doc.title}].concat(doc.blocks.map(x => x.type === 'h' ? {type:'h', level:x.level, text:x.text} : {type:'p', text:x.text})); }
+function libEntry(){
+  return {k:doc.key, t:doc.title, kind:doc.meta.kind, src:doc.meta.src || null, pages:doc.meta.pages || null, chars:doc.totalChars,
+    pass:D.pass || 0, last:D.lastDone || 0, seen:Date.now(), pct:Math.floor(readChars / doc.totalChars * 100), at:Date.now()};
+}
+function libUpsert(){
+  if(!doc || !D || (!readChars && !D.pass)) return;   // 開いただけの文章は覚えない
+  const e = libEntry();
+  let l = libGet().filter(x => x.k !== e.k); l.unshift(e);
+  const drop = l.slice(LIB_MAX); l = l.slice(0, LIB_MAX);
+  drop.forEach(x => { try{ localStorage.removeItem('dopa:txt:' + x.k); localStorage.removeItem(x.k); }catch(err){} });
+  store.set('dopa:lib', l);
+  if(!store.get('dopa:txt:' + e.k, null)) store.set('dopa:txt:' + e.k, {blocks:docBlocks(), meta:{name:doc.title, kind:doc.meta.kind, src:doc.meta.src || null, pages:doc.meta.pages || null}});
+  cloudSaveArticle(e.k);
+  libRender();
+}
+function isDue(e, now){ return e.pass > 0 && now >= e.last + nextGap(e.pass) * DAY; }
+function libRender(){
+  const l = libGet(), now = Date.now();
+  const rows = l.map(e => ({e, due:isDue(e, now), has:!!store.get('dopa:txt:' + e.k, null) || !!cloud.art[e.k]}))
+    .sort((a, b) => (b.due - a.due) || (a.due ? (a.e.last + nextGap(a.e.pass) * DAY) - (b.e.last + nextGap(b.e.pass) * DAY) : b.e.seen - a.e.seen));
+  $('#lib').hidden = !rows.length;
+  $('#openLoad').classList.toggle('due', rows.some(r => r.due));
+  $('#libList').innerHTML = rows.map(({e, due, has}) => {
+    const sub = e.pass ? `${e.pass}周読了 ・ ${agoText(now - e.last)}` + (e.pct && e.pct < 100 ? ` ・ ${e.pass + 1}周目 ${e.pct}%` : '') : `${e.pct}% まで ・ ${agoText(now - e.seen)}`;
+    let badge;
+    if(!e.pass) badge = '続き';
+    else if(due) badge = '読みどき ' + fmtMult(spacingMult(now - e.last));
+    else { const d = Math.ceil((e.last + nextGap(e.pass) * DAY - now) / DAY); badge = `あと${d}日`; }
+    return `<li><button type="button" data-k="${esc(e.k)}"${has ? '' : ' disabled title="この端末には本文が保存されていません"'}><span class="lt">${esc(e.t)}</span><span class="ls">${esc(sub)}</span><span class="lb${due ? ' due' : ''}">${esc(badge)}</span></button></li>`;
+  }).join('');
+  return rows.filter(r => r.due).length;
+}
+function libOpen(k){
+  const t = store.get('dopa:txt:' + k, null) || cloud.art[k];
+  if(doc && doc.key === k){ closeLoad(); return; }   // すでに開いている
+  if(!t || !Array.isArray(t.blocks)) return;
+  openDoc(t.blocks.map(b => Object.assign({}, b)), Object.assign({}, t.meta));
+  closeLoad();
+}
+
+function openSample(){ openDoc(parsePlain(SAMPLE), {name:'サンプル', kind:'サンプル論文'}); }
+
+function titleFromText(t, fallback){
+  const first = t.trim().split('\n')[0].trim();
+  return first.length > 0 && first.length <= 60 && !/[。．.]$/.test(first) ? first.replace(/^#+\s*/, '') : fallback;
+}
+async function handleFile(f){
+  const msg = $('#fileMsg'); msg.classList.remove('err');
+  try{
+    if(/\.pdf$/i.test(f.name) || f.type === 'application/pdf'){
+      msg.textContent = 'PDF を読み込んでいます…';
+      const buf = await f.arrayBuffer();
+      const {blocks, pages} = await parsePdf(buf, (p, n) => { msg.textContent = `PDF を読み込んでいます… ${p}/${n} ページ`; });
+      if(!blocks.some(b => b.type === 'h' && b.level === 1)) blocks.unshift({type:'h', level:1, text:f.name.replace(/\.pdf$/i, '')});
+      openDoc(blocks, {name:f.name, kind:'PDF', pages});
+    } else {
+      const text = await f.text();
+      const blocks = parsePlain(text);
+      if(!blocks.some(b => b.type === 'h' && b.level === 1)) blocks.unshift({type:'h', level:1, text:f.name.replace(/\.(txt|md|markdown)$/i, '')});
+      openDoc(blocks, {name:f.name, kind:'ファイル'});
+    }
+    msg.textContent = '';
+    closeLoad();
+  }catch(e){
+    msg.classList.add('err');
+    msg.textContent = e.message === 'script' ? 'PDF 読み込み用のライブラリを取得できませんでした。本文を貼り付けてください。'
+      : (e.message === 'empty' || e.message === 'nop') ? '文字を取り出せませんでした。スキャン画像の PDF かもしれません。本文を貼り付けてください。'
+      : 'このファイルは読み込めませんでした。本文を貼り付けてください。';
+  }
+}
+function openLoad(){ libRender(); $('#loadBg').hidden = false; setTimeout(() => $('#src').focus(), 30); }
+function closeLoad(){ $('#loadBg').hidden = true; }
+
+/* ---------------- events ---------------- */
+$('#openLoad').addEventListener('click', openLoad);
+$('#loadBg').addEventListener('click', e => { if(e.target.id === 'loadBg') closeLoad(); });
+$('#useSample').addEventListener('click', () => { openSample(); closeLoad(); });
+function openFromText(t){
+  if(t.startsWith('@@dopa ')) store.set(CLIP_KEY, hash(t));   // 同じ本文を自動でもう一度開かないように
+  let src = null, kind = '貼り付けた文章';
+  const m = t.match(/^@@dopa (\S+)\r?\n/);
+  if(m){ src = /^https?:\/\//.test(m[1]) ? m[1] : null; t = t.slice(m[0].length); }
+  if(src){ try{ kind = 'WEB ・ ' + new URL(src).hostname.replace(/^www\./, ''); }catch(e){} }
+  const blocks = parsePlain(t);
+  if(!blocks.some(b => b.type === 'h' && b.level === 1)){
+    const tt = titleFromText(t, '貼り付けた文章');
+    if(tt !== '貼り付けた文章' && blocks[0] && blocks[0].text === tt) blocks[0] = {type:'h', level:1, text:tt};
+    else blocks.unshift({type:'h', level:1, text:tt});
+  }
+  openDoc(blocks, {name:'貼り付けた文章', kind, src});
+}
+$('#usePaste').addEventListener('click', () => {
+  const t = $('#src').value; const msg = $('#fileMsg');
+  if(!t.trim()){ msg.classList.add('err'); msg.textContent = '本文を貼り付けてから押してください。'; return; }
+  if(/^\s*https?:\/\/\S+\s*$/.test(t)){ $('#url').value = t.trim(); updateUrl(); $('#src').value = ''; msg.classList.add('err'); msg.textContent = 'URL だけでは本文を取得できません。上の手順でページを開いて「ドパる」を押してください。'; return; }
+  try{ openFromText(t); $('#src').value = ''; msg.textContent = ''; closeLoad(); }
+  catch(e){ msg.classList.add('err'); msg.textContent = '本文として読める段落が見つかりませんでした。'; }
+});
+document.addEventListener('paste', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if(tag === 'textarea' || tag === 'input') return;
+  const t = (e.clipboardData && e.clipboardData.getData('text')) || '';
+  if(!t.trim()) return;
+  e.preventDefault();
+  if(/^\s*https?:\/\/\S+\s*$/.test(t)){
+    openLoad(); $('#url').value = t.trim(); updateUrl();
+    toast('URL', 'そのページを開いて「ドパる」を押してください', 'URL だけでは本文を取得できません');
+    return;
+  }
+  if(!t.startsWith('@@dopa ') && t.trim().length < 80){ toast('短すぎます', '本文をまとめてコピーしてから貼り付けてください', ''); return; }
+  try{
+    openFromText(t); closeLoad(); $('#doneBg').hidden = true;
+    toast('読み込み完了', doc.title, `${doc.totalChars.toLocaleString()} 字 ・ ${doc.sents.length} 文`);
+  }catch(err){ toast('読み込めません', '本文として読める段落が見つかりませんでした', ''); }
+});
+
+/* ---------- クリップボードから自動で読み込む ---------- */
+// 「ドパる」でコピーした本文（@@dopa で始まる）を、タブに戻ったときに自動で開く。
+// 自動で読むのはブラウザがクリップボードの読み取りを許可しているときだけ。初回はボタンで許可をもらう。
+const CLIP_KEY = 'dopa:lastclip';
+const clipAllowed = (() => {
+  if(!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') return false;
+  try{ const fp = document.permissionsPolicy || document.featurePolicy; return fp && fp.allowsFeature ? fp.allowsFeature('clipboard-read') : true; }catch(e){ return true; }
+})();
+let clipBusy = false;
+async function readClip(gesture){
+  if(!clipAllowed) return 'unsupported';
+  if(clipBusy) return 'busy';
+  if(!gesture){
+    try{ const st = await navigator.permissions.query({name:'clipboard-read'}); if(st.state !== 'granted') return 'ask'; }
+    catch(e){ return 'ask'; }   // 許可状態を確かめられないブラウザでは自動で読まない
+  }
+  clipBusy = true;
+  let t = '';
+  try{ t = await navigator.clipboard.readText(); }catch(e){ clipBusy = false; return 'denied'; }
+  clipBusy = false;
+  if(!t || !t.trim()) return 'empty';
+  const isDopa = t.startsWith('@@dopa ');
+  if(!gesture && (!isDopa || store.get(CLIP_KEY, '') === hash(t))) return 'none';   // 読み込み済みの本文は開き直さない
+  if(/^\s*https?:\/\/\S+\s*$/.test(t)) return 'url';
+  if(!isDopa && t.trim().length < 80) return 'short';
+  try{ openFromText(t); }catch(e){ return 'bad'; }
+  closeLoad(); $('#doneBg').hidden = true;
+  toast('読み込み完了', doc.title, `${doc.totalChars.toLocaleString()} 字 ・ ${doc.sents.length} 文`);
+  return 'ok';
+}
+if(!clipAllowed) $('#clipRow').hidden = true;
+$('#clipBtn').addEventListener('click', async () => {
+  const m = $('#clipMsg'); m.classList.remove('err');
+  const r = await readClip(true);
+  const say = {
+    ok: '',
+    denied: 'クリップボードを読めませんでした。このページで Ctrl+V（Mac は ⌘+V）を押すか、「読み込む」に貼り付けてください。',
+    empty: 'クリップボードが空です。記事のページで「ドパる」を押してからもう一度どうぞ。',
+    url: 'コピーされているのは URL だけです。そのページを開いて「ドパる」を押してください。',
+    short: 'コピーされている文章が短すぎます。本文をまとめてコピーしてください。',
+    bad: '本文として読める段落が見つかりませんでした。',
+  }[r];
+  if(say !== undefined){ m.textContent = r === 'ok' ? '次からは「ドパる」を押すだけで自動で開きます。' : say; if(r !== 'ok') m.classList.add('err'); }
+});
+// 自分のサイトに置いたとき：「ドパる」が開いたタブへ本文を直接送ってくる（許可もコピーも不要）
+const seenMsg = new Set();
+addEventListener('message', e => {
+  const d = e.data;
+  if(!d || d.type !== 'dopa-text' || typeof d.text !== 'string' || typeof d.id !== 'string') return;
+  try{ e.source && e.source.postMessage({type:'dopa-ack', id:d.id}, '*'); }catch(err){}
+  if(seenMsg.has(d.id)) return; seenMsg.add(d.id);
+  try{
+    openFromText(d.text); closeLoad(); $('#doneBg').hidden = true;
+    toast('読み込み完了', doc.title, `${doc.totalChars.toLocaleString()} 字 ・ ${doc.sents.length} 文`);
+  }catch(err){ toast('読み込めません', '本文として読める段落が見つかりませんでした', ''); }
+});
+const autoClip = () => { if(!document.hidden) readClip(false); };
+document.addEventListener('visibilitychange', autoClip);
+addEventListener('focus', autoClip);
+
+/* ---------- Webページ用ブックマークレット（記事ページ側で動く） ---------- */
+function dopaGrab(){(async()=>{
+  const A='__DOPA_URL__';
+  const d=document;
+  const say=(m,ms)=>{let b=d.getElementById('dopa-say');if(!b){b=d.createElement('div');b.id='dopa-say';b.style.cssText='position:fixed;z-index:2147483647;left:16px;right:16px;bottom:24px;margin:0 auto;width:fit-content;max-width:480px;background:#191B26;color:#fff;font:600 14px/1.6 system-ui,sans-serif;padding:12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3)';d.body.appendChild(b);}b.textContent=m;clearTimeout(b._t);b._t=setTimeout(()=>b.remove(),ms||7000);};
+  const skip='nav,footer,aside,script,style,noscript,form,button,svg,figure,table,iframe,dialog,.ltx_bibliography,.ltx_role_footnote,.ltx_page_footer,.ltx_authors,[role=navigation],[role=complementary],[aria-hidden=true],[hidden]';
+  const blockTags=/^(P|DIV|UL|OL|H[1-6]|SECTION|ARTICLE|TABLE|BLOCKQUOTE|PRE|FIGURE|DL|MAIN)$/;
+  const clean=e=>{const c=e.cloneNode(true);c.querySelectorAll('math').forEach(m=>m.replaceWith(d.createTextNode(' '+(m.getAttribute('alttext')||m.textContent)+' ')));c.querySelectorAll('.mw-editsection,sup.reference,.ltx_note_outer,.ltx_tag_note,script,style,button,noscript').forEach(x=>x.remove());return c.textContent.replace(/\s+/g,' ').trim();};
+  const out=[];
+  const walk=e=>{for(const c of e.children){if(c.matches(skip))continue;const t=c.tagName;if(/^H[1-4]$/.test(t)){const x=clean(c);if(x)out.push((t==='H1'?'# ':'## ')+x);}else if(/^(P|LI|BLOCKQUOTE|DD|PRE)$/.test(t)){const x=clean(c);if(x.length>1)out.push(x);}else if((t==='DIV'||t==='SECTION')&&![...c.children].some(k=>blockTags.test(k.tagName))){const x=(c.innerText||'').trim();if(x.length>30)x.split(/\n\s*\n/).forEach(p=>{p=p.replace(/\s*\n\s*/g,' ').trim();if(p)out.push(p);});}else walk(c);}};
+  let txt='';
+  const sel=String(getSelection()||'').trim();
+  if(sel.length>200){txt='# '+d.title+'\n\n'+sel;}
+  else{
+    let root=d.querySelector('article')||d.querySelector('main')||d.querySelector('[role=main]');
+    if(!root||(root.innerText||'').length<400){let best=d.body,bs=0;d.querySelectorAll('div,section').forEach(e=>{let s=0;e.querySelectorAll(':scope>p').forEach(p=>{s+=(p.innerText||'').length;});if(s>bs){bs=s;best=e;}});const par=best.parentElement;root=(par&&par!==d.documentElement&&par!==d.body&&(par.innerText||'').length<(best.innerText||'').length*1.6)?par:best;}
+    walk(root);
+    const flat=[];out.forEach(x=>{if(flat[flat.length-1]!==x)flat.push(x);});
+    if(!flat.some(x=>x.startsWith('# ')))flat.unshift('# '+d.title);
+    txt=flat.join('\n\n');
+  }
+  const n=txt.split('\n').filter(x=>x&&!x.startsWith('#')).join('').length;
+  if(n<200){say('本文を見つけられませんでした。読みたい部分を選択してから、もう一度「ドパる」を押してください。');return;}
+  txt='@@dopa '+location.href+'\n'+txt;
+  let ok=false;
+  try{await navigator.clipboard.writeText(txt);ok=true;}catch(e){}
+  if(!ok){const ta=d.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;top:0;left:0;opacity:0';d.body.appendChild(ta);ta.focus();ta.select();try{ok=d.execCommand('copy');}catch(e){}ta.remove();}
+  const direct=!/claude\.ai/.test(A);
+  if(!ok&&!direct){say('コピーできませんでした。本文を選択してコピーし、ドパブラウザに貼り付けてください。');return;}
+  const w=window.open(A,'dopabrowser');
+  if(w&&direct){const id=Date.now()+'-'+Math.random();let k=0;const iv=setInterval(()=>{try{w.postMessage({type:'dopa-text',id,text:txt},'*');}catch(e){}if(++k>80)clearInterval(iv);},250);addEventListener('message',e=>{if(e.data&&e.data.type==='dopa-ack'&&e.data.id===id){clearInterval(iv);say('ドパブラウザで開きました。',4000);}});}
+  if(direct&&!w)say('ドパブラウザのタブを開けませんでした。このサイトのポップアップを許可してから、もう一度「ドパる」を押してください。',9000);
+  if(!direct)say('本文 '+n.toLocaleString()+' 字をコピーしました。'+(w?'':'ドパブラウザのタブに切り替えてください。')+'自動で開かないときは「コピーした本文を読む」を押してください。',9000);
+})();}
+// 自分のサイトに置いたときはそのURLへ、Claude 上ではアーティファクトのURLへ戻る
+const SELF_URL = (/^https?:$/.test(location.protocol) && window.top === window) ? location.href.split('#')[0] : 'https://claude.ai/artifact/4wFpYFbGqj2YZQCpbRT7f3';
+const BOOKMARKLET = 'javascript:' + encodeURIComponent('(' + dopaGrab.toString().replace(/\n\s*/g, '').replace('__DOPA_URL__', SELF_URL) + ')();void 0');
+$('#bmLink').href = BOOKMARKLET;
+if(!/claude\.ai/.test(SELF_URL)){   // 自分のサイトに置いたとき：本文はタブへ直接届く
+  $('#step3').textContent = '開いたページでブックマークの「ドパる」を押すと、このタブに本文が届いてすぐ読み始められます。本文を選択してから押すと、選んだ部分だけを読み込みます。';
+  $('#clipRow').hidden = true;
+}
+$('#bmLink').addEventListener('click', e => { e.preventDefault(); const m = $('#bmMsg'); m.classList.remove('err'); m.textContent = 'ここでは押さずに、ブックマークバーへドラッグしてください。'; });
+$('#bmCopy').addEventListener('click', () => {
+  const m = $('#bmMsg'); m.classList.remove('err');
+  const done = () => { m.textContent = 'コピーしました。新しいブックマークの URL 欄に貼り付け、名前を「ドパる」にしてください。'; };
+  const fallback = () => { const ta = $('#src'); ta.value = BOOKMARKLET; ta.focus(); ta.select(); m.classList.add('err'); m.textContent = '自動でコピーできませんでした。下の欄に入れたコードを選択した状態なので、そのままコピーしてください。'; };
+  try{ navigator.clipboard.writeText(BOOKMARKLET).then(done, fallback); }catch(e){ fallback(); }
+});
+function updateUrl(){
+  let v = $('#url').value.trim(); const a = $('#urlGo'), note = $('#urlNote'); note.textContent = '';
+  if(v && !/^https?:\/\//i.test(v) && /^[\w-]+(\.[\w-]+)+/.test(v)) v = 'https://' + v;
+  if(!/^https?:\/\/\S+$/i.test(v)){ a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); return; }
+  const m = v.match(/arxiv\.org\/(?:abs|pdf|html)\/([0-9]{4}\.[0-9]{4,5}(?:v\d+)?)/i);
+  if(m){ v = 'https://arxiv.org/html/' + m[1]; note.textContent = 'arXiv は本文を取り出しやすい HTML 版を開きます。HTML 版がない論文は PDF をダウンロードし、ファイルとして読み込んでください。'; }
+  a.href = v; a.removeAttribute('aria-disabled');
+}
+$('#url').addEventListener('input', updateUrl);
+$('#url').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); updateUrl(); if($('#urlGo').href) $('#urlGo').click(); } });
+$('#file').addEventListener('change', e => { const f = e.target.files[0]; if(f) handleFile(f); e.target.value = ''; });
+document.addEventListener('dragover', e => { e.preventDefault(); if($('#loadBg').hidden) openLoad(); $('#loadBg').classList.add('drop-on'); });
+document.addEventListener('dragleave', e => { if(!e.relatedTarget) $('#loadBg').classList.remove('drop-on'); });
+document.addEventListener('drop', e => { e.preventDefault(); $('#loadBg').classList.remove('drop-on'); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) handleFile(f); });
+
+const pop = $('#setPop');
+$('#openSet').addEventListener('click', e => { e.stopPropagation(); pop.hidden = !pop.hidden; $('#openSet').setAttribute('aria-expanded', String(!pop.hidden)); });
+document.addEventListener('click', e => { if(!pop.hidden && !pop.contains(e.target) && e.target !== $('#openSet')){ pop.hidden = true; $('#openSet').setAttribute('aria-expanded', 'false'); } });
+pop.addEventListener('change', e => {
+  const t = e.target; if(t.type !== 'radio') return;
+  const prevBionic = S.bionic, prevSize = S.size;
+  if(t.name === 'str') S.str = +t.value;
+  if(t.name === 'dim') S.dim = +t.value;
+  if(t.name === 'size') S.size = +t.value;
+  if(t.name === 'bionic') S.bionic = t.value === '1';
+  if(t.name === 'sound'){ S.sound = t.value === '1'; if(S.sound){ tone(659.25, 0, .15, .04); tone(987.77, .08, .2, .035); } }
+  store.set('dopa:settings', S); applySettings(); cloudSave();
+  relayout(prevBionic, prevSize);
+});
+function relayout(prevBionic, prevSize){
+  if(doc && S.bionic !== prevBionic){ const c = cur; render(); if(c >= 0) markCur(c, -2); }
+  if(doc && (S.bionic !== prevBionic || S.size !== prevSize)){ requestAnimationFrame(() => { measure(); if(cur >= 0 && cur < doc.sents.length) window.scrollTo({top: doc.sents[cur].top - focusY() + 2}); }); }
+}
+
+/* ---------- アカウントに保存（端末・記事をまたいでレベルと設定を引き継ぐ） ---------- */
+async function cloudInit(){
+  try{
+    if(!window.claude || typeof claude.use !== 'function') return;
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    if(!db || !user) return;
+    const uid = await user.id(); if(!uid) return;
+    const ref = db.doc('data/users/' + uid + '/profile');
+    const snap = await ref.get();
+    if(snap.exists){
+      const d = snap.data() || {};
+      if(d.settings && typeof d.settings === 'object'){
+        const prevBionic = S.bionic, prevSize = S.size;
+        Object.assign(S, d.settings); store.set('dopa:settings', S); applySettings(); relayout(prevBionic, prevSize);
+      }
+      if(d.global && typeof d.global === 'object'){
+        G.xp = Math.max(G.xp || 0, +d.global.xp || 0);
+        G.rereads = Math.max(G.rereads || 0, +d.global.rereads || 0);
+        const days = new Set([...(G.days || []), ...(Array.isArray(d.global.days) ? d.global.days : [])]);
+        const key = s => { const [y, m, dd] = String(s).split('-').map(Number); return y * 10000 + m * 100 + dd; };
+        G.days = [...days].sort((a, b) => key(a) - key(b)).slice(-120);
+        store.set('dopa:global', G);
+      }
+      if(doc) hud();
+    }
+    cloud.ref = ref; cloudSave();
+    // 文章ごとの進捗と本文（端末をまたいで読み返せるように）
+    cloud.docs = ref.collection('docs');
+    const qs = await cloud.docs.get();
+    const lib = libGet(); let changed = false;
+    for(const s of qs.docs){
+      const d = s.data(); if(!d || typeof d.k !== 'string') continue;
+      cloud.known.add(s.id);
+      if(Array.isArray(d.blocks)) cloud.art[d.k] = {blocks:d.blocks, meta:d.meta || {name:d.t, kind:d.kind}};
+      const i = lib.findIndex(x => x.k === d.k);
+      if(i < 0 || (d.at || 0) > (lib[i].at || 0)){
+        const e = {k:d.k, t:d.t, kind:d.kind, src:d.src || null, pages:d.pages || null, chars:d.chars, pass:d.pass || 0, last:d.last || 0, seen:d.seen || 0, pct:d.pct || 0, at:d.at || 0};
+        if(i < 0) lib.push(e); else lib[i] = e;
+        if(d.D && (!doc || doc.key !== d.k)) store.set(d.k, d.D);
+        changed = true;
+      }
+    }
+    if(changed){ lib.sort((a, b) => b.seen - a.seen); store.set('dopa:lib', lib.slice(0, LIB_MAX)); }
+    const due = libRender();
+    if(due) toast('読みどき', `読み返しどきの文章が ${due} 件あります`, '「読み込む」から開けます');
+    // この端末にしかない文章をアカウントへ
+    for(const e of libGet()) if(!cloud.known.has(artId(e.k))) await cloudPutArticle(e.k);
+  }catch(e){}
+}
+function articleBody(k){
+  const e = libGet().find(x => x.k === k); if(!e) return null;
+  const body = Object.assign({}, e, {D: (doc && doc.key === k) ? Object.assign({}, D, {st: doc.sents.map(s => s.st).join('')}) : store.get(k, null), at: e.at || Date.now()});
+  if(!body.D) delete body.D;
+  return body;
+}
+async function cloudPutArticle(k){
+  if(!cloud.docs) return;
+  const id = artId(k), body = articleBody(k); if(!body) return;
+  const ref = cloud.docs.doc(id);
+  try{
+    if(cloud.known.has(id)) await ref.update(body);
+    else {
+      const t = store.get('dopa:txt:' + k, null);
+      if(t){ const full = Object.assign({}, body, {blocks:t.blocks, meta:t.meta}); if(new Blob([JSON.stringify(full)]).size < 240000) Object.assign(body, {blocks:t.blocks, meta:t.meta}); }
+      await ref.set(body); cloud.known.add(id);
+    }
+  }catch(err){}
+}
+function cloudSaveArticle(k, now){
+  if(!cloud.docs) return;
+  const a = cloud.artQ || (cloud.artQ = {});
+  const q = a[k] || (a[k] = {t:0, busy:false, again:false});
+  clearTimeout(q.t);
+  const run = async () => {
+    if(q.busy){ q.again = true; return; }
+    q.busy = true; await cloudPutArticle(k); q.busy = false;
+    if(q.again){ q.again = false; cloudSaveArticle(k); }
+  };
+  if(now) run(); else q.t = setTimeout(run, 2500);
+}
+function cloudSave(){
+  if(!cloud.ref) return;
+  clearTimeout(cloud.timer);
+  cloud.timer = setTimeout(async () => {
+    if(cloud.busy){ cloud.again = true; return; }
+    cloud.busy = true;
+    try{ await cloud.ref.set(profileBody()); }catch(e){}
+    cloud.busy = false;
+    if(cloud.again){ cloud.again = false; cloudSave(); }
+  }, 1500);
+}
+let resetArm = 0;
+$('#resetDoc').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if(!resetArm){ b.textContent = 'もう一度押すとリセット'; resetArm = setTimeout(() => { resetArm = 0; b.textContent = 'この文章の進捗をリセット'; }, 3000); return; }
+  clearTimeout(resetArm); resetArm = 0; b.textContent = 'この文章の進捗をリセット';
+  try{ localStorage.removeItem(doc.key); }catch(err){}
+  const blocks = doc.blocks.map(x => ({type:x.type, level:x.level, text:x.text}));
+  blocks.unshift({type:'h', level:1, text:doc.title});
+  const meta = Object.assign({}, doc.meta, {name:doc.title});
+  doc = null; openDoc(blocks, meta); pop.hidden = true;
+  toast('リセット', 'この文章を最初から読めます', '累計 XP はそのままです');
+});
+
+$('#fab').addEventListener('click', () => goTo(cur + 1));
+$('#mini').addEventListener('click', e => { const b = e.target.closest('i'); if(!b) return; const blk = doc.blocks[+b.dataset.b]; goTo(blk.sents[0]); });
+$('#doneClose').addEventListener('click', () => { $('#doneBg').hidden = true; });
+$('#doneNext').addEventListener('click', () => { $('#doneBg').hidden = true; openLoad(); });
+$('#doneAgain').addEventListener('click', () => {
+  $('#doneBg').hidden = true;
+  const meta = Object.assign({}, doc.meta, {name:doc.title});
+  const blocks = docBlocks(); saveNow(); doc = null; openDoc(blocks, meta);
+});
+$('#libList').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if(b && !b.disabled) libOpen(b.dataset.k); });
+$('#doneBg').addEventListener('click', e => { if(e.target.id === 'doneBg') $('#doneBg').hidden = true; });
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ closeLoad(); $('#doneBg').hidden = true; pop.hidden = true; return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if(tag === 'textarea' || tag === 'input' || e.target.isContentEditable) return;
+  if(!$('#loadBg').hidden || !$('#doneBg').hidden) return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  if((e.key === ' ' && !e.shiftKey) || e.key === 'j'){ e.preventDefault(); goTo(cur + 1); }
+  else if((e.key === ' ' && e.shiftKey) || e.key === 'k'){ e.preventDefault(); goTo(Math.max(0, cur - 1)); }
+});
+addEventListener('scroll', onScroll, {passive:true});
+let rz = 0;
+addEventListener('resize', () => { resizeFx(); clearTimeout(rz); rz = setTimeout(() => { measure(); onScroll(); }, 120); });
+new ResizeObserver(() => { measure(); onScroll(); }).observe(reader);
+addEventListener('pagehide', saveNow);
+document.addEventListener('visibilitychange', () => { if(document.hidden) saveNow(); else lastT = Math.max(lastT, performance.now() - 60000); });
+
+try{ history.scrollRestoration = 'manual'; }catch(e){}
+applySettings(); resizeFx(); openSample(); cloudInit(); libRender(); autoClip();
+})();
+</script>
+
+</body>
+</html>
