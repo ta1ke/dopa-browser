@@ -291,10 +291,10 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
       </ol>
     </section>
     <div class="or">または本文・ファイルから</div>
-    <p>本文を貼り付けるか、ファイル（.txt / .md / .pdf）を選んでください。このウィンドウにファイルをドロップしても読み込めます。PDF は文字データを含むものに対応しています。スキャン画像だけの PDF は読み込めないので、本文をコピーして貼り付けてください。</p>
+    <p>本文を貼り付けるか、ファイル（.txt / .md / .pdf / .html）を選んでください。このウィンドウにファイルをドロップしても読み込めます。PDF は文字データを含むものに対応しています。スキャン画像だけの PDF は読み込めないので、本文をコピーして貼り付けてください。</p>
     <textarea id="src" placeholder="ここに論文や記事の本文を貼り付け"></textarea>
     <div class="row">
-      <label class="btn file">ファイルを選ぶ<input type="file" id="file" accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"></label>
+      <label class="btn file">ファイルを選ぶ<input type="file" id="file" accept=".txt,.md,.markdown,.pdf,.html,.htm,text/plain,text/markdown,text/html,application/pdf"></label>
       <span class="msg" id="fileMsg"></span>
       <span class="sp"></span>
       <button class="btn ghost" id="useSample" type="button">サンプルに戻す</button>
@@ -394,6 +394,71 @@ function stripMd(s){
   return s.replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/(\*\*|__)(.+?)\1/g, '$2').replace(/`([^`]+)`/g, '$1');
 }
+/* ---------------- 数式（TeX）を読める記号に ---------------- */
+const TEX_SYM = {alpha:'α',beta:'β',gamma:'γ',delta:'δ',epsilon:'ε',varepsilon:'ε',zeta:'ζ',eta:'η',theta:'θ',vartheta:'ϑ',iota:'ι',kappa:'κ',lambda:'λ',mu:'μ',nu:'ν',xi:'ξ',pi:'π',varpi:'ϖ',rho:'ρ',varrho:'ϱ',sigma:'σ',varsigma:'ς',tau:'τ',upsilon:'υ',phi:'ϕ',varphi:'φ',chi:'χ',psi:'ψ',omega:'ω',
+  Gamma:'Γ',Delta:'Δ',Theta:'Θ',Lambda:'Λ',Xi:'Ξ',Pi:'Π',Sigma:'Σ',Upsilon:'Υ',Phi:'Φ',Psi:'Ψ',Omega:'Ω',
+  le:'≤',leq:'≤',ge:'≥',geq:'≥',ne:'≠',neq:'≠',approx:'≈',sim:'∼',simeq:'≃',equiv:'≡',cong:'≅',propto:'∝',cdot:'·',times:'×',div:'÷',pm:'±',mp:'∓',ast:'∗',star:'⋆',
+  infty:'∞',partial:'∂',nabla:'∇',sum:'Σ',prod:'Π',int:'∫',iint:'∬',oint:'∮',to:'→',rightarrow:'→',Rightarrow:'⇒',longrightarrow:'⟶',leftarrow:'←',Leftarrow:'⇐',leftrightarrow:'↔',Leftrightarrow:'⇔',iff:'⇔',implies:'⇒',mapsto:'↦',uparrow:'↑',downarrow:'↓',
+  in:'∈',notin:'∉',ni:'∋',subset:'⊂',subseteq:'⊆',supset:'⊃',supseteq:'⊇',cup:'∪',cap:'∩',bigcup:'⋃',bigcap:'⋂',emptyset:'∅',varnothing:'∅',setminus:'∖',forall:'∀',exists:'∃',neg:'¬',lnot:'¬',land:'∧',wedge:'∧',lor:'∨',vee:'∨',oplus:'⊕',otimes:'⊗',
+  mid:'∣',vert:'|',Vert:'‖',lvert:'|',rvert:'|',lVert:'‖',rVert:'‖',langle:'⟨',rangle:'⟩',lfloor:'⌊',rfloor:'⌋',lceil:'⌈',rceil:'⌉',ldots:'…',cdots:'⋯',dots:'…',vdots:'⋮',ddots:'⋱',
+  prime:'′',circ:'∘',bullet:'•',ell:'ℓ',hbar:'ℏ',perp:'⊥',parallel:'∥',ll:'≪',gg:'≫',top:'⊤',angle:'∠',triangle:'△',square:'□',checkmark:'✓',
+  '{':'\uE000','}':'\uE001','%':'%','$':'$','&':'&','#':'#','_':'_',' ':' ',',':' ',';':' ',':':' ','!':'','|':'‖',quad:' ',qquad:'  ',
+  lbrace:'\uE000',rbrace:'\uE001',lbrack:'[',rbrack:']',backslash:'\\',colon:':'};
+const TEX_WORD = /^(log|ln|exp|sin|cos|tan|sinh|cosh|tanh|arcsin|arccos|arctan|max|min|lim|limsup|liminf|sup|inf|det|dim|ker|deg|gcd|arg|Pr|mod|bmod|argmax|argmin)$/;
+const TEX_CAL = 'A𝒜 Bℬ C𝒞 D𝒟 Eℰ Fℱ G𝒢 Hℋ Iℐ J𝒥 K𝒦 Lℒ Mℳ N𝒩 O𝒪 P𝒫 Q𝒬 Rℛ S𝒮 T𝒯 U𝒰 V𝒱 W𝒲 X𝒳 Y𝒴 Z𝒵'.split(' ').reduce((o, s) => (o[s[0]] = s.slice(1), o), {});
+const TEX_BB = {N:'ℕ',Z:'ℤ',Q:'ℚ',R:'ℝ',C:'ℂ',E:'𝔼',P:'ℙ',F:'𝔽',H:'ℍ',1:'𝟙'};
+const TEX_ACC = {hat:'̂', widehat:'̂', bar:'̄', overline:'̄', tilde:'̃', widetilde:'̃', vec:'⃗', dot:'̇', ddot:'̈'};
+const SUP = {0:'⁰',1:'¹',2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶',7:'⁷',8:'⁸',9:'⁹','+':'⁺','-':'⁻','−':'⁻','=':'⁼','(':'⁽',')':'⁾',a:'ᵃ',b:'ᵇ',c:'ᶜ',d:'ᵈ',e:'ᵉ',f:'ᶠ',g:'ᵍ',h:'ʰ',i:'ⁱ',j:'ʲ',k:'ᵏ',l:'ˡ',m:'ᵐ',n:'ⁿ',o:'ᵒ',p:'ᵖ',r:'ʳ',s:'ˢ',t:'ᵗ',u:'ᵘ',v:'ᵛ',w:'ʷ',x:'ˣ',y:'ʸ',z:'ᶻ',T:'ᵀ','*':'*','′':'′',' ':''};
+const SUB = {0:'₀',1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',7:'₇',8:'₈',9:'₉','+':'₊','-':'₋','−':'₋','=':'₌','(':'₍',')':'₎',a:'ₐ',e:'ₑ',h:'ₕ',i:'ᵢ',j:'ⱼ',k:'ₖ',l:'ₗ',m:'ₘ',n:'ₙ',o:'ₒ',p:'ₚ',r:'ᵣ',s:'ₛ',t:'ₜ',u:'ᵤ',v:'ᵥ',x:'ₓ',' ':''};
+function scriptOf(s, map, mark){
+  const t = s.trim();
+  if(t && [...t].every(ch => ch in map)) return [...t].map(ch => map[ch]).join('');
+  return mark + ([...t].length > 1 ? '(' + t + ')' : t);
+}
+function texToText(src){
+  let s = ' ' + src + ' ';
+  s = s.replace(/\\(?:left|right|bigl|bigr|Bigl|Bigr|biggl|biggr|Biggl|Biggr|big|Big|bigg|Bigg|middle)(?![a-zA-Z])\s*(\\[{}|]|[()[\]|.]|\\[a-zA-Z]+)?/g, (m, dl) => (dl && dl !== '.') ? dl : '')
+       .replace(/\\(?:displaystyle|textstyle|scriptstyle|limits|nolimits|nonumber|notag)(?![a-zA-Z])/g, '')
+       .replace(/\\(?:begin|end)\{[a-zA-Z*]+\}(\{[^{}]*\})?/g, ' ').replace(/\\\\/g, '; ').replace(/&/g, ' ');
+  s = s.replace(/\\([a-zA-Z]+)\s?/g, (m, w) => TEX_SYM[w] !== undefined && !/^(quad|qquad)$/.test(w) ? TEX_SYM[w] : m);   // 記号は先に置き換える（分数の括弧判定のため）
+  const wrap = x => { x = x.trim(); return /^[\w.′∂α-ωΑ-Ω²³¹̀-ͯ⁰-₟]+$/.test(x) ? x : '(' + x + ')'; };
+  for(let k = 0; k < 14; k++){
+    const before = s;
+    s = s.replace(/\\(?:text|textrm|textit|textbf|textsf|mathrm|mathit|mathbf|mathsf|mathtt|operatorname\*?|boldsymbol|bm|mbox|hbox)\s*\{([^{}]*)\}/g, '$1')
+         .replace(/\\mathcal\s*\{\s*([A-Z])\s*\}|\\mathcal\s*([A-Z])/g, (m, a, b) => TEX_CAL[a || b] || (a || b))
+         .replace(/\\mathbb\s*\{\s*([A-Z1])\s*\}|\\mathbb\s*([A-Z1])/g, (m, a, b) => TEX_BB[a || b] || (a || b))
+         .replace(/\\(hat|widehat|bar|overline|tilde|widetilde|vec|dot|ddot)\s*\{([^{}]*)\}/g, (m, c, a) => a.trim() + TEX_ACC[c])
+         .replace(/\\(hat|bar|tilde|vec|dot|ddot)\s*([A-Za-z])/g, (m, c, a) => a + TEX_ACC[c])
+         .replace(/\^\s*\{([^{}]*)\}/g, (m, a) => scriptOf(a, SUP, '^'))
+         .replace(/_\s*\{([^{}]*)\}/g, (m, a) => scriptOf(a, SUB, '_'))
+         .replace(/\^\s*([A-Za-z0-9′*+−-])/g, (m, a) => scriptOf(a, SUP, '^'))
+         .replace(/_\s*([A-Za-z0-9])/g, (m, a) => scriptOf(a, SUB, '_'))
+         .replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (m, a, b) => wrap(a) + '/' + wrap(b))
+         .replace(/\\[dt]?frac\s*(\w)\s*(\w)/g, '$1/$2')
+         .replace(/\\sqrt\s*\[([^\]]*)\]\s*\{([^{}]*)\}/g, (m, n, a) => scriptOf(n, SUP, '') + '√' + wrap(a))
+         .replace(/\\sqrt\s*\{([^{}]*)\}/g, (m, a) => '√' + wrap(a))
+         ;
+    if(s === before) break;
+  }
+  s = s.replace(/\\([a-zA-Z]+)\s?|\\([^a-zA-Z])/g, (m, w, c) => {
+    if(c !== undefined) return TEX_SYM[c] !== undefined ? TEX_SYM[c] : c;
+    if(TEX_SYM[w] !== undefined) return TEX_SYM[w];
+    if(TEX_WORD.test(w)) return w + '\u2009';
+    return w;
+  });
+  s = s.replace(/\^\s*([A-Za-z0-9′*+−-])/g, (m, a) => scriptOf(a, SUP, '^'))
+       .replace(/_\s*([A-Za-z0-9])/g, (m, a) => scriptOf(a, SUB, '_'))
+       .replace(/[{}]/g, '').replace(/\uE000/g, '{').replace(/\uE001/g, '}').replace(/'/g, '′').replace(/\u2009\s*(?=[(_^⁽₍])/g, '').replace(/\u2009/g, ' ')
+       .replace(/\s*(:=|[=<>≤≥≠≈→⇒⇔∈≡∼])\s*/g, ' $1 ').replace(/\s+/g, ' ').trim();
+  return s;
+}
+function mathify(t){
+  if(t.indexOf('\\(') < 0 && t.indexOf('\\[') < 0 && t.indexOf('$$') < 0) return t;
+  return t.replace(/\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$/g, (m, a, b) => '\n\n' + texToText(a || b) + '\n\n')
+          .replace(/\\\(([\s\S]+?)\\\)/g, (m, a) => texToText(a))
+          .replace(/\n{3,}/g, '\n\n');
+}
+
 function smartJoin(a, b){
   if(!a) return b; if(!b) return a;
   const x = a.slice(-1), y = b[0];
@@ -977,8 +1042,13 @@ async function handleFile(f){
       const {blocks, pages} = await parsePdf(buf, (p, n) => { msg.textContent = `PDF を読み込んでいます… ${p}/${n} ページ`; });
       if(!blocks.some(b => b.type === 'h' && b.level === 1)) blocks.unshift({type:'h', level:1, text:f.name.replace(/\.pdf$/i, '')});
       openDoc(blocks, {name:f.name, kind:'PDF', pages});
+    } else if(/\.html?$/i.test(f.name) || f.type === 'text/html'){
+      const html = await f.text();
+      const pd = new DOMParser().parseFromString(html, 'text/html');
+      const t = dopaExtract(pd, false);
+      openFromText(t, 'HTML ・ ' + f.name);
     } else {
-      const text = await f.text();
+      const text = mathify(await f.text());
       const blocks = parsePlain(text);
       if(!blocks.some(b => b.type === 'h' && b.level === 1)) blocks.unshift({type:'h', level:1, text:f.name.replace(/\.(txt|md|markdown)$/i, '')});
       openDoc(blocks, {name:f.name, kind:'ファイル'});
@@ -999,12 +1069,14 @@ function closeLoad(){ $('#loadBg').hidden = true; }
 $('#openLoad').addEventListener('click', openLoad);
 $('#loadBg').addEventListener('click', e => { if(e.target.id === 'loadBg') closeLoad(); });
 $('#useSample').addEventListener('click', () => { openSample(); closeLoad(); });
-function openFromText(t){
+function openFromText(t, kindOverride){
   if(t.startsWith('@@dopa ')) store.set(CLIP_KEY, hash(t));   // 同じ本文を自動でもう一度開かないように
   let src = null, kind = '貼り付けた文章';
   const m = t.match(/^@@dopa (\S+)\r?\n/);
   if(m){ src = /^https?:\/\//.test(m[1]) ? m[1] : null; t = t.slice(m[0].length); }
   if(src){ try{ kind = 'WEB ・ ' + new URL(src).hostname.replace(/^www\./, ''); }catch(e){} }
+  if(kindOverride) kind = kindOverride;
+  t = mathify(t);
   const blocks = parsePlain(t);
   if(!blocks.some(b => b.type === 'h' && b.level === 1)){
     const tt = titleFromText(t, '貼り付けた文章');
@@ -1098,27 +1170,55 @@ const autoClip = () => { if(!document.hidden) readClip(false); };
 document.addEventListener('visibilitychange', autoClip);
 addEventListener('focus', autoClip);
 
+/* ---------- 本文の抽出（ブックマークレットと .html ファイル読み込みで共用） ---------- */
+function dopaExtract(d,live){
+  const skip='nav,footer,aside,script,style,noscript,form,button,svg,canvas,figure img,iframe,dialog,template,input,select,textarea,mjx-assistive-mml,.ltx_bibliography,.ltx_role_footnote,.ltx_page_footer,.ltx_authors,[role=navigation],[role=complementary],[aria-hidden=true],[hidden]';
+  const junk=/(^|[\s_-])(toc|breadcrumbs?|share|sharing|social|related|recommend|comments?|sidebar|menu|navbar|footer|advert|ads|promo|newsletter|cookie)([\s_-]|$)/i;
+  const isJunk=e=>junk.test((typeof e.className==='string'?e.className:'')+' '+(e.id||''));
+  const tex=new Map();
+  try{const M=live&&window.MathJax;if(M&&M.startup&&M.startup.document&&M.startup.document.math){for(const m of M.startup.document.math){if(m.typesetRoot&&typeof m.math==='string')tex.set(m.typesetRoot,m.math.trim());}}}catch(e){}
+  const mathText=(o,m)=>{if(tex.has(o))return '\\('+tex.get(o)+'\\)';const mm=m.querySelector('math');if(!mm)return '';const at=mm.getAttribute('alttext');return at?'\\('+at+'\\)':mm.textContent;};
+  const clean=e=>{const c=e.cloneNode(true);const o=e.querySelectorAll?[...e.querySelectorAll('mjx-container')]:[];if(e.tagName==='MJX-CONTAINER')o.unshift(e);const cm=c.tagName==='MJX-CONTAINER'?[c]:[...c.querySelectorAll('mjx-container')];if(c.tagName==='MJX-CONTAINER'){return mathText(e,c).replace(/\s+/g,' ').trim();}cm.forEach((m,i)=>m.replaceWith(d.createTextNode(' '+mathText(o[i],m)+' ')));c.querySelectorAll('.katex').forEach(k=>{const a=k.querySelector('annotation[encoding="application/x-tex"]');k.replaceWith(d.createTextNode(' '+(a?'\\('+a.textContent+'\\)':k.textContent)+' '));});c.querySelectorAll('math').forEach(m=>{const at=m.getAttribute('alttext');m.replaceWith(d.createTextNode(' '+(at?'\\('+at+'\\)':m.textContent)+' '));});c.querySelectorAll('br').forEach(x=>x.replaceWith(d.createTextNode(' ')));c.querySelectorAll('.mw-editsection,sup.reference,.ltx_note_outer,.ltx_tag_note,script,style,button,noscript,mjx-assistive-mml').forEach(x=>x.remove());return c.textContent.replace(/\s+/g,' ').trim();};
+  const blockTags=/^(P|DIV|UL|OL|DL|H[1-6]|SECTION|ARTICLE|MAIN|HEADER|TABLE|BLOCKQUOTE|PRE|FIGURE|FIGCAPTION|DETAILS|SUMMARY|LI|DD|DT|TR|HR|FORM|FIELDSET|ADDRESS|CENTER)$/;
+  const linky=e=>{const all=(e.textContent||'').replace(/\s/g,'').length;if(!all)return true;let a=0;e.querySelectorAll('a').forEach(x=>{a+=(x.textContent||'').replace(/\s/g,'').length;});return a/all>0.6;};
+  const isDispMath=c=>(c.tagName==='MJX-CONTAINER'&&c.getAttribute('display')==='true')||(c.classList&&c.classList.contains('katex-display'));
+  const out=[];
+  const walk=e=>{let buf='';const flush=()=>{const x=buf.replace(/\s+/g,' ').trim();if(x.length>1)out.push(x);buf='';};
+    for(const c of e.childNodes){
+      if(c.nodeType===3){buf+=c.textContent;continue;}
+      if(c.nodeType!==1)continue;
+      if(c.matches(skip)||isJunk(c))continue;
+      const t=c.tagName;
+      if(t==='BR'){if(/\n\s*$/.test(buf))flush();else buf+='\n';continue;}
+      if(isDispMath(c)){flush();const x=clean(c).replace(/^\\\(([\s\S]*)\\\)$/,'\\[$1\\]');if(x)out.push(x);continue;}
+      if(!blockTags.test(t)){buf+=clean(c);continue;}
+      flush();
+      if(/^H[1-6]$/.test(t)){const x=clean(c);if(x)out.push((t==='H1'?'# ':'## ')+x);}
+      else if(t==='UL'||t==='OL'||t==='DL'){if(c.children.length>=3&&linky(c))continue;walk(c);}
+      else if(t==='TABLE'){c.querySelectorAll('tr').forEach(r=>{const cells=[...r.children].map(clean).filter(Boolean);if(cells.length)out.push(cells.join(' ／ '));});}
+      else if(/^(P|PRE|FIGCAPTION|SUMMARY|DT)$/.test(t)){const x=clean(c);if(x.length>1)out.push(x);}
+      else if((t==='LI'||t==='DD'||t==='BLOCKQUOTE')&&![...c.children].some(k=>/^(P|DIV|UL|OL|TABLE|PRE|BLOCKQUOTE)$/.test(k.tagName))){const x=clean(c);if(x.length>1)out.push(x);}
+      else if(t!=='HR')walk(c);
+    }
+    flush();};
+  const pickRoot=()=>{const cnt=new Map();const leaves=d.body.querySelectorAll('p,li,h1,h2,h3,h4,h5,h6,blockquote,pre,dd,td,div,section');leaves.forEach(p=>{if(p.closest(skip))return;let own=0;for(const n of p.childNodes)if(n.nodeType===3)own+=n.textContent.replace(/\s/g,'').length;if(!own)return;for(let a=p;a&&a!==d.documentElement;a=a.parentElement)cnt.set(a,(cnt.get(a)||0)+own);});const total=cnt.get(d.body)||0;let r=d.body;for(;;){let best=null,bv=0;for(const c of r.children){const v=cnt.get(c)||0;if(v>bv){bv=v;best=c;}}if(best&&bv>=total*0.8&&!best.matches(skip))r=best;else break;}return r;};
+  let txt='';
+  const sel=live?String(getSelection()||'').trim():'';
+  if(sel.length>200){txt='# '+d.title+'\n\n'+sel;}
+  else{
+    walk(pickRoot());
+    const flat=[];out.forEach(x=>{if(flat[flat.length-1]!==x)flat.push(x);});
+    if(!flat.some(x=>x.startsWith('# ')))flat.unshift('# '+d.title);
+    txt=flat.join('\n\n');
+  }
+  return txt;
+}
 /* ---------- Webページ用ブックマークレット（記事ページ側で動く） ---------- */
 function dopaGrab(){(async()=>{
   const A='__DOPA_URL__';
   const d=document;
   const say=(m,ms)=>{let b=d.getElementById('dopa-say');if(!b){b=d.createElement('div');b.id='dopa-say';b.style.cssText='position:fixed;z-index:2147483647;left:16px;right:16px;bottom:24px;margin:0 auto;width:fit-content;max-width:480px;background:#191B26;color:#fff;font:600 14px/1.6 system-ui,sans-serif;padding:12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3)';d.body.appendChild(b);}b.textContent=m;clearTimeout(b._t);b._t=setTimeout(()=>b.remove(),ms||7000);};
-  const skip='nav,footer,aside,script,style,noscript,form,button,svg,figure,table,iframe,dialog,.ltx_bibliography,.ltx_role_footnote,.ltx_page_footer,.ltx_authors,[role=navigation],[role=complementary],[aria-hidden=true],[hidden]';
-  const blockTags=/^(P|DIV|UL|OL|H[1-6]|SECTION|ARTICLE|TABLE|BLOCKQUOTE|PRE|FIGURE|DL|MAIN)$/;
-  const clean=e=>{const c=e.cloneNode(true);c.querySelectorAll('math').forEach(m=>m.replaceWith(d.createTextNode(' '+(m.getAttribute('alttext')||m.textContent)+' ')));c.querySelectorAll('.mw-editsection,sup.reference,.ltx_note_outer,.ltx_tag_note,script,style,button,noscript').forEach(x=>x.remove());return c.textContent.replace(/\s+/g,' ').trim();};
-  const out=[];
-  const walk=e=>{for(const c of e.children){if(c.matches(skip))continue;const t=c.tagName;if(/^H[1-4]$/.test(t)){const x=clean(c);if(x)out.push((t==='H1'?'# ':'## ')+x);}else if(/^(P|LI|BLOCKQUOTE|DD|PRE)$/.test(t)){const x=clean(c);if(x.length>1)out.push(x);}else if((t==='DIV'||t==='SECTION')&&![...c.children].some(k=>blockTags.test(k.tagName))){const x=(c.innerText||'').trim();if(x.length>30)x.split(/\n\s*\n/).forEach(p=>{p=p.replace(/\s*\n\s*/g,' ').trim();if(p)out.push(p);});}else walk(c);}};
-  let txt='';
-  const sel=String(getSelection()||'').trim();
-  if(sel.length>200){txt='# '+d.title+'\n\n'+sel;}
-  else{
-    let root=d.querySelector('article')||d.querySelector('main')||d.querySelector('[role=main]');
-    if(!root||(root.innerText||'').length<400){let best=d.body,bs=0;d.querySelectorAll('div,section').forEach(e=>{let s=0;e.querySelectorAll(':scope>p').forEach(p=>{s+=(p.innerText||'').length;});if(s>bs){bs=s;best=e;}});const par=best.parentElement;root=(par&&par!==d.documentElement&&par!==d.body&&(par.innerText||'').length<(best.innerText||'').length*1.6)?par:best;}
-    walk(root);
-    const flat=[];out.forEach(x=>{if(flat[flat.length-1]!==x)flat.push(x);});
-    if(!flat.some(x=>x.startsWith('# ')))flat.unshift('# '+d.title);
-    txt=flat.join('\n\n');
-  }
+  let txt=dopaExtract(d,true);
   const n=txt.split('\n').filter(x=>x&&!x.startsWith('#')).join('').length;
   if(n<200){say('本文を見つけられませんでした。読みたい部分を選択してから、もう一度「ドパる」を押してください。');return;}
   txt='@@dopa '+location.href+'\n'+txt;
@@ -1134,7 +1234,7 @@ function dopaGrab(){(async()=>{
 })();}
 // 自分のサイトに置いたときはそのURLへ、Claude 上ではアーティファクトのURLへ戻る
 const SELF_URL = (/^https?:$/.test(location.protocol) && window.top === window) ? location.href.split('#')[0] : 'https://claude.ai/artifact/4wFpYFbGqj2YZQCpbRT7f3';
-const BOOKMARKLET = 'javascript:' + encodeURIComponent('(' + dopaGrab.toString().replace(/\n\s*/g, '').replace('__DOPA_URL__', SELF_URL) + ')();void 0');
+const BOOKMARKLET = 'javascript:' + encodeURIComponent(('(function(){const dopaExtract=' + dopaExtract.toString() + ';(' + dopaGrab.toString() + ')();})()').replace(/\n\s*/g, '').replace('__DOPA_URL__', SELF_URL) + ';void 0');
 $('#bmLink').href = BOOKMARKLET;
 if(!/claude\.ai/.test(SELF_URL)){   // 自分のサイトに置いたとき：本文はタブへ直接届く
   $('#step3').textContent = '開いたページでブックマークの「ドパる」を押すと、このタブに本文が届いてすぐ読み始められます。本文を選択してから押すと、選んだ部分だけを読み込みます。';
