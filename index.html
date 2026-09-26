@@ -100,6 +100,22 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
   box-shadow:inset 0 0 70px hsl(var(--h) 95% 58% / .38); animation:fever 1.6s ease-in-out infinite alternate}
 @keyframes fever{from{opacity:.55}to{opacity:1}}
 .toast.gold .tag{background:hsl(45 100% 55%)}
+.toast.myst .tag{background:hsl(275 80% 68%)}
+/* 謎の言葉 */
+.myst{position:fixed; right:16px; bottom:calc(72px + env(safe-area-inset-bottom,0px)); z-index:25; font:inherit; color:var(--ink); cursor:pointer;
+  background:var(--paper); border:1px solid color-mix(in oklab, hsl(275 70% 60%) 55%, var(--line)); border-radius:14px; padding:8px 12px 8px 10px;
+  display:grid; grid-template-columns:auto 1fr; gap:0 10px; align-items:center; text-align:left; box-shadow:var(--shadow); max-width:calc(100vw - 32px)}
+.myst .q{grid-row:1 / span 2; width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-family:var(--disp); font-size:17px;
+  background:hsl(275 75% 62%); color:#fff}
+.myst .mw{font-family:var(--mono); font-weight:700; font-size:15px; letter-spacing:.12em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.myst small{font-size:11.5px; color:var(--ink-2)}
+.myst.reveal{animation:flip .7s cubic-bezier(.3,1.4,.5,1)}
+@keyframes flip{0%{transform:rotateX(0)}45%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+.myst.reveal .q{background:hsl(45 100% 52%)}
+.fw{box-shadow:inset 0 -.5em 0 hsl(275 85% 70% / .35); border-radius:2px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chips span{font-size:12.5px; padding:4px 10px; border-radius:999px; background:color-mix(in oklab, hsl(275 75% 62%) 16%, var(--paper)); border:1px solid color-mix(in oklab, hsl(275 70% 60%) 35%, var(--line))}
+.chips span.miss{opacity:.5; text-decoration:line-through}
 .fab kbd{font-family:var(--mono); font-size:11px; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:1px 5px; background:var(--paper); color:var(--ink-2)}
 
 .reader{max-width:40em; margin-inline:auto; font-size:var(--fs); line-height:1.95; letter-spacing:.02em; padding-bottom:62vh}
@@ -142,6 +158,7 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
 #fx{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:23}
 .toasts{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom,0px)); z-index:40;
   display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; width:max-content; max-width:calc(100vw - 32px)}
+.toasts{bottom:calc(142px + env(safe-area-inset-bottom,0px))}
 .toast{background:var(--ink); color:var(--bg); border-radius:12px; padding:10px 16px 10px 10px; display:flex; gap:12px; align-items:center;
   box-shadow:var(--shadow); animation:tin .38s cubic-bezier(.2,1.4,.4,1), tout .4s ease 2.9s forwards; max-width:100%}
 .toast .tag{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em; background:hsl(var(--h) 88% 58%); color:#12131a; border-radius:7px; padding:5px 8px; white-space:nowrap}
@@ -272,7 +289,7 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
         <input type="radio" name="sound" id="so0" value="0"><label for="so0">オフ</label>
         <input type="radio" name="sound" id="so1" value="1"><label for="so1">オン</label>
       </div></div>
-    <div class="totals"><span>累計 <b id="tXp">0</b> XP ・ 連続 <b id="tDays">0</b> 日 ・ 再読 <b id="tRe">0</b> 回</span><button class="btn ghost" id="resetDoc" type="button">この文章の進捗をリセット</button></div>
+    <div class="totals"><span>累計 <b id="tXp">0</b> XP ・ 連続 <b id="tDays">0</b> 日 ・ 再読 <b id="tRe">0</b> 回 ・ 発見 <b id="tFound">0</b> 語</span><button class="btn ghost" id="resetDoc" type="button">この文章の進捗をリセット</button></div>
   </div>
 </div>
 
@@ -291,6 +308,7 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
 <nav class="mini" id="mini" aria-label="段落ごとの進み具合"></nav>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<button class="myst" id="myst" type="button" hidden aria-label="この先に出てくる謎の言葉（押すとヒント）"><span class="q">？</span><span class="mw" id="mw"></span><small id="md"></small></button>
 <button class="fab" id="fab" type="button">次の文 <small id="fabCp"></small> <kbd>Space</kbd></button>
 
 <div class="sheet-bg" id="loadBg" hidden>
@@ -329,6 +347,7 @@ body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:
     <div class="done-title" id="doneTitle">読了</div>
     <p id="doneSub"></p>
     <div class="grid" id="doneGrid"></div>
+    <div id="doneWordsBox" hidden><p style="margin:0 0 8px">発見した言葉</p><div class="chips" id="doneWords"></div></div>
     <div class="row"><span class="sp"></span><button class="btn ghost" id="doneClose" type="button">閉じる</button><button class="btn" id="doneAgain" type="button">もう一度読む</button><button class="btn primary" id="doneNext" type="button">次の文章を読む</button></div>
   </div>
 </div>
@@ -382,7 +401,7 @@ const SAMPLE = `# 報酬予測誤差とドーパミン：「驚き」は学習�
 
 /* ---------------- settings & global ---------------- */
 let S = Object.assign({str:1, dim:0.72, size:18, bionic:false, sound:false, fx:2}, store.get('dopa:settings', {}));
-let G = Object.assign({xp:0, days:[], rereads:0}, store.get('dopa:global', {}));
+let G = Object.assign({xp:0, days:[], rereads:0, found:0}, store.get('dopa:global', {}));
 const cloud = {ref:null, docs:null, timer:0, busy:false, again:false, known:new Set(), art:{}};
 const DAY = 86400000;
 const INTERVALS = [1, 3, 7, 14, 30];   // 読了回数ごとの「次に読み返すとよい」日数
@@ -693,6 +712,7 @@ function render(){
   blocks.forEach(b => { if(b.type === 'p') refreshBlock(b, true); });
   doc.sections.forEach(sec => refreshSection(sec, true));
   if(cur >= 0 && cur < sents.length) markCur(cur, -2);
+  if(D && D.found && terms !== undefined) (D.found || []).forEach(w => { const i = sents.findIndex(s => s.st === 1 && s.text.includes(w)); if(i >= 0) markFound(i, w); });
 }
 
 function measure(){
@@ -717,7 +737,7 @@ function loadDocState(){
 let lapBonus = 0;
 function startLap(){
   D.mult = D.lastDone ? spacingMult(Date.now() - D.lastDone) : 1;
-  D.st = ''; D.done = false; D.ms = {}; D.xp = 0; D.cred = 0; D.time = 0; D.maxCombo = 0; D.lucky = []; D.luckyN = 0; D.chests = 0;
+  D.st = ''; D.done = false; D.ms = {}; D.xp = 0; D.cred = 0; D.time = 0; D.maxCombo = 0; D.lucky = []; D.luckyN = 0; D.chests = 0; D.found = []; D.missed = [];
   D.lapStart = Date.now();
 }
 function lapNo(){ return (D && D.pass || 0) + (D && D.done ? 0 : 1); }
@@ -855,6 +875,7 @@ function advance(from, to, now){
   setFever(S.fx > 0 && combo >= FEVER_AT);
   if(gain){ addXP(gain); if(hits.length) hits.forEach(showLucky); else floatXP(gain, combo); blip(combo); bump('#hCombo'); }
   checkChests();
+  checkMystery();
   touched.forEach(bi => refreshBlock(doc.blocks[bi]));
   const secs = new Set([...touched].map(bi => doc.blocks[bi].sec).filter(Boolean));
   secs.forEach(sec => refreshSection(sec));
@@ -943,6 +964,89 @@ setInterval(() => {
   toast('あと少し', t ? t.replace('宝箱まで ', '次の宝箱まで あと ') : 'ゴールはすぐそこ', sinceLucky > 6 ? 'そろそろ当たりが出やすくなっています' : '一文ずつで大丈夫');
 }, 5000);
 
+/* ---------------- 好奇心：この先に出てくる「謎の言葉」 ---------------- */
+// 少し先に出てくる重要そうな言葉を伏せ字で予告し、その文までじっくり読むと正体がわかる。
+const TERM = /「([^「」\n]{2,18})」|『([^『』\n]{2,22})』|[ァ-ヶ][ァ-ヶー・]{3,}|\b[A-Z][a-z]+(?:[-–][A-Z][a-z]+)+\b|\b[A-Z]{2,}[A-Za-z]*\b|\b[A-Z][a-z]{4,}\b/g;
+const TERM_STOP = /^(This|That|These|There|Then|When|What|Which|While|However|Therefore|Figure|Table|Section|Chapter|Note|Example|Part|Here|Also|Thus|Since|After|Before)$/;
+let terms = null, mys = null;
+function buildMystery(){
+  terms = new Map();
+  doc.sents.forEach((s, i) => {
+    TERM.lastIndex = 0; let m;
+    while((m = TERM.exec(s.text))){
+      const w = (m[1] || m[2] || m[0]).trim();
+      if(w.length < 2 || TERM_STOP.test(w) || /^[A-Z]{2,3}$/.test(w) && w.length < 2) continue;
+      const t = terms.get(w); if(t) t.n++; else terms.set(w, {w, at:i, n:1});
+    }
+  });
+  const done = new Set([...(D.found || []), ...(D.missed || [])]);
+  for(const w of done) terms.delete(w);
+  mys = null; pickMystery();
+}
+function distTo(i){ let d = 0; for(let k = Math.max(frontier, 0); k < i; k++) if(!doc.sents[k].st) d += doc.sents[k].len; return d; }
+function pickMystery(){
+  mys = null;
+  if(!S.fx || !terms){ drawMystery(); return; }
+  const ss = doc.sents; while(frontier < ss.length && ss[frontier].st) frontier++;
+  let best = null, bs = -1;
+  for(const t of terms.values()){
+    if(t.at <= frontier + 1 || ss[t.at].st) continue;
+    const d = distTo(t.at);
+    if(d < 120 || d > 1400) continue;
+    const sc = t.n * 3 + Math.min(t.w.length, 8) - d / 400 + Math.random() * 2;   // 何度も出てくる言葉ほど重要
+    if(sc > bs){ bs = sc; best = t; }
+  }
+  if(best){ mys = {w:best.w, at:best.at, n:best.n, shown:new Set()}; terms.delete(best.w); }
+  drawMystery();
+}
+function maskWord(w, shown){
+  const ch = [...w];
+  return ch.map((c, k) => (k === 0 || shown.has(k) || /[\s・\-–]/.test(c)) ? c : '・').join('');
+}
+function drawMystery(){
+  const b = $('#myst');
+  if(!mys || !doc){ b.hidden = true; return; }
+  b.hidden = false; b.classList.remove('reveal'); b.querySelector('.q').textContent = '？';
+  $('#mw').textContent = maskWord(mys.w, mys.shown);
+  const d = distTo(mys.at);
+  $('#md').textContent = `この先に出てくる言葉 ・ あと ${d.toLocaleString()}字` + (mys.n > 1 ? ` ・ ${mys.n}回登場` : '');
+}
+$('#myst').addEventListener('click', () => {   // 押すと1文字ずつヒント（半分まで）
+  if(!mys) return;
+  const ch = [...mys.w]; const hidden = ch.map((c, k) => k).filter(k => k > 0 && !mys.shown.has(k) && !/[\s・\-–]/.test(ch[k]));
+  if(hidden.length <= Math.floor(ch.length / 2)){ toast('ヒント', 'これ以上は読んでのお楽しみ', `あと ${distTo(mys.at).toLocaleString()}字で正体がわかります`, 'myst'); return; }
+  mys.shown.add(hidden[Math.floor(Math.random() * hidden.length)]); mys.hint = (mys.hint || 0) + 1; drawMystery();
+});
+function checkMystery(){
+  if(!mys){ if(S.fx && terms && Math.random() < 0.5) pickMystery(); else drawMystery(); return; }
+  const s = doc.sents[mys.at];
+  if(s.st === 1){
+    const g = Math.round((25 + [...mys.w].length * 6) * (mys.hint ? Math.max(0.4, 1 - mys.hint * 0.2) : 1) * (D.mult || 1));
+    addXP(g); D.found = (D.found || []).concat(mys.w); G.found = (G.found || 0) + 1;
+    markFound(mys.at, mys.w);
+    const b = $('#myst'); b.querySelector('.q').textContent = '！'; $('#mw').textContent = mys.w; $('#md').textContent = `発見！ +${g} XP`;
+    b.classList.remove('reveal'); void b.offsetWidth; b.classList.add('reveal');
+    toast('発見', `「${mys.w}」`, `+${g} XP ・ この文章で ${D.found.length} 語目`, 'myst');
+    [0, 5, 9, 14].forEach((n, k) => tone(698.46 * Math.pow(2, n / 12), k * .07, .22, .035));
+    const r = s.el.getBoundingClientRect(); if(r.bottom > 0 && r.top < innerHeight) burst(Math.min(r.left + 40, innerWidth - 40), r.top + 8, 22, 275);
+    mys = null; setTimeout(pickMystery, 2600);
+  } else if(s.st === 2){
+    D.missed = (D.missed || []).concat(mys.w);
+    toast('見逃し', `正体は「${mys.w}」でした`, '飛ばし読みすると謎は解けません', 'myst');
+    mys = null; pickMystery();
+  } else drawMystery();
+}
+function markFound(i, w){
+  const el = doc.sents[i].el; if(!el) return;
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+  while((n = walker.nextNode())){
+    const k = n.textContent.indexOf(w); if(k < 0) continue;
+    const r = document.createRange(); r.setStart(n, k); r.setEnd(n, k + w.length);
+    const sp = document.createElement('span'); sp.className = 'fw';
+    try{ r.surroundContents(sp); }catch(e){} return;
+  }
+}
+
 function milestones(){
   const p = readChars / doc.totalChars;
   for(const m of [25, 50, 75]){
@@ -973,6 +1077,7 @@ function hud(){
   $('#tXp').textContent = G.xp.toLocaleString();
   $('#tDays').textContent = streak();
   $('#tRe').textContent = (G.rereads || 0).toLocaleString();
+  $('#tFound').textContent = (G.found || 0).toLocaleString();
 }
 function bump(sel){ if(reduce) return; const e = $(sel); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
 function floatXP(g, c){
@@ -1049,6 +1154,8 @@ function showDone(){
     ['獲得 XP', `${D.xp.toLocaleString()}`],
   ];
   $('#doneGrid').innerHTML = cells.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  const fw = (D.found || []).map(w => `<span>${esc(w)}</span>`).concat((D.missed || []).map(w => `<span class="miss" title="見逃した言葉">${esc(w)}</span>`));
+  $('#doneWordsBox').hidden = !fw.length; $('#doneWords').innerHTML = fw.join('');
   $('#doneBg').hidden = false;
   if(!reduce){ for(let k = 0; k < 4; k++) setTimeout(() => burst(innerWidth * (.2 + .2 * k), innerHeight * .35, 22), k * 140); }
   [0, 4, 7, 12, 16].forEach((n, k) => tone(523.25 * Math.pow(2, n / 12), k * .1, .3, .04));
@@ -1073,6 +1180,7 @@ function openDoc(blocks, meta){
   $('#meta').innerHTML = `<span>${doc.totalChars.toLocaleString()} 字</span><span>${doc.sents.length} 文</span><span>目安 ${mins} 分</span>` + (doc.pages ? `<span>${doc.pages} ページ</span>` : '') + (meta.src ? `<span><a href="${meta.src.replace(/"/g, '%22').replace(/</g, '%3C')}" target="_blank" rel="noopener">元のページ</a></span>` : '');
   render();
   buildCps();
+  buildMystery();
   measure();
   hud();
   scrollTo({top:0, behavior:'auto'});
@@ -1090,7 +1198,7 @@ function openDoc(blocks, meta){
   document.fonts && document.fonts.ready.then(() => { measure(); onScroll(); });
 }
 function saveNow(){ if(!doc || !D) return; D.st = doc.sents.map(s => s.st).join(''); store.set(doc.key, D); store.set('dopa:global', G); libUpsert(); if(cloud.ref){ clearTimeout(cloud.timer); cloud.ref.set(profileBody()).catch(() => {}); if(doc) cloudSaveArticle(doc.key, true); } }
-function profileBody(){ return {v:1, settings:Object.assign({}, S), global:{xp:G.xp, days:G.days.slice(-120), rereads:G.rereads || 0}, at:Date.now()}; }
+function profileBody(){ return {v:1, settings:Object.assign({}, S), global:{xp:G.xp, days:G.days.slice(-120), rereads:G.rereads || 0, found:G.found || 0}, at:Date.now()}; }
 
 /* ---------- 読み返しリスト（読んだ文章を覚えておく） ---------- */
 const LIB_MAX = 40;
@@ -1382,7 +1490,7 @@ pop.addEventListener('change', e => {
   if(t.name === 'dim') S.dim = +t.value;
   if(t.name === 'size') S.size = +t.value;
   if(t.name === 'bionic') S.bionic = t.value === '1';
-  if(t.name === 'fx'){ S.fx = +t.value; if(doc){ buildCps(); if(S.fx === 0) setFever(false); hud(); } }
+  if(t.name === 'fx'){ S.fx = +t.value; if(doc){ buildCps(); buildMystery(); if(S.fx === 0) setFever(false); hud(); } }
   if(t.name === 'sound'){ S.sound = t.value === '1'; if(S.sound){ tone(659.25, 0, .15, .04); tone(987.77, .08, .2, .035); } }
   store.set('dopa:settings', S); applySettings(); cloudSave();
   relayout(prevBionic, prevSize);
@@ -1410,6 +1518,7 @@ async function cloudInit(){
       if(d.global && typeof d.global === 'object'){
         G.xp = Math.max(G.xp || 0, +d.global.xp || 0);
         G.rereads = Math.max(G.rereads || 0, +d.global.rereads || 0);
+        G.found = Math.max(G.found || 0, +d.global.found || 0);
         const days = new Set([...(G.days || []), ...(Array.isArray(d.global.days) ? d.global.days : [])]);
         const key = s => { const [y, m, dd] = String(s).split('-').map(Number); return y * 10000 + m * 100 + dd; };
         G.days = [...days].sort((a, b) => key(a) - key(b)).slice(-120);
